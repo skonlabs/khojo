@@ -110,7 +110,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     line-height: 1.6;
   }
@@ -130,7 +130,7 @@
     line-height: 1.4;
   }
   code, pre, .font-mono {
-    font-family: 'Courier Prime', 'Courier New', Courier, monospace;
+    font-family: 'IBM Plex Mono', monospace;
   }
 }
 

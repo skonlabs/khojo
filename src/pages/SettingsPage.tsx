@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { activeProject, refreshProjects, user, setActiveProject } = useAuth();
+  const { activeProject, refreshProjects, user, setActiveProjectId } = useAuth();
   const [projectName, setProjectName] = useState(activeProject?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);

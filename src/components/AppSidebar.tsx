@@ -19,7 +19,7 @@ const navItems = [
 ];
 
 const secondaryItems = [
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Project Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {

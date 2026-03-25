@@ -2,11 +2,6 @@ import { useState } from "react";
 import { Zap, Activity, AlertTriangle, Terminal, Command, Settings, Search, BookOpen, ChevronRight, Code, Eye, Wrench, HelpCircle, Clock, CheckCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import overviewImg from "@/assets/docs/overview-dashboard.jpg";
-import analyzerImg from "@/assets/docs/analyzer-page.jpg";
-import runDetailImg from "@/assets/docs/run-detail.jpg";
-import issuesImg from "@/assets/docs/issues-page.jpg";
-
 // ——————————————————————————————————————————————
 // Documentation data
 // ——————————————————————————————————————————————
@@ -27,7 +22,7 @@ type Block =
   | { type: "text"; content: string }
   | { type: "heading"; content: string }
   | { type: "subheading"; content: string }
-  | { type: "image"; src: string; alt: string; caption?: string }
+  | { type: "mockup"; variant: "overview" | "analyzer" | "issues" | "run-detail"; caption?: string }
   | { type: "code"; lang: string; code: string }
   | { type: "list"; items: string[] }
   | { type: "numbered"; items: string[] }
@@ -79,7 +74,7 @@ const docSections: DocSection[] = [
             "Optionally add **Context** — the documents or knowledge base the AI should have used",
             "Click **Analyze**",
           ]},
-          { type: "image", src: analyzerImg, alt: "Instant Analyzer showing analysis results with hallucination detection", caption: "The Instant Analyzer detects a hallucination — the AI said \"30 days\" but the context says \"14 days\"" },
+          { type: "mockup", variant: "analyzer", caption: "The Instant Analyzer detects a hallucination — the AI said \"30 days\" but the context says \"14 days\"" },
           { type: "callout", variant: "tip", content: "Click **\"Load Example\"** to see a pre-filled hallucination scenario and understand the output format." },
           { type: "heading", content: "Step 2: Read the diagnosis" },
           { type: "text", content: "Every analysis returns four sections:" },
@@ -141,7 +136,7 @@ await client.track({
         blocks: [
           { type: "heading", content: "When to use the Overview" },
           { type: "text", content: "Open the Overview when you want a quick health check of your AI system. It answers: \"How are things going overall? Are issues getting better or worse?\"" },
-          { type: "image", src: overviewImg, alt: "Overview dashboard with metrics and charts", caption: "The Overview shows total runs, failure rate, token usage, and trend charts at a glance" },
+          { type: "mockup", variant: "overview", caption: "The Overview shows total runs, failure rate, token usage, and trend charts at a glance" },
           { type: "heading", content: "Key metrics explained" },
           { type: "table", headers: ["Metric", "What It Means", "Good Target"], rows: [
             ["Total Runs", "Number of AI calls captured", "Depends on your volume"],
@@ -181,7 +176,7 @@ await client.track({
             "You're evaluating a **RAG pipeline** and want to validate retrieval quality",
           ]},
           { type: "heading", content: "How to use it" },
-          { type: "image", src: analyzerImg, alt: "Instant Analyzer interface", caption: "Paste input, output, and context → click Analyze → get actionable diagnosis" },
+          { type: "mockup", variant: "analyzer", caption: "Paste input, output, and context → click Analyze → get actionable diagnosis" },
           { type: "heading", content: "Fields explained" },
           { type: "table", headers: ["Field", "Required?", "What To Put Here", "Why It Matters"], rows: [
             ["Input", "Yes", "The user's question or query", "Needed to check relevance and completeness"],
@@ -211,7 +206,7 @@ Output:  "Premium subscribers can request a full refund within 30 days
         blocks: [
           { type: "heading", content: "When to use the Issues page" },
           { type: "text", content: "Use Issues when you want to see **what's broken across all your runs**, not just one. It groups failures by type and lets you prioritize what to fix first." },
-          { type: "image", src: issuesImg, alt: "Issues page showing failure types and filters", caption: "Issues table with failure type badges, confidence levels, and dismiss actions" },
+          { type: "mockup", variant: "issues", caption: "Issues table with failure type badges, confidence levels, and dismiss actions" },
           { type: "heading", content: "How issues are prioritized" },
           { type: "table", headers: ["Priority", "Failure Types", "Why"], rows: [
             ["🔥 Critical", "Hallucination, high-frequency failures", "Users are getting wrong information — fix immediately"],
@@ -282,7 +277,7 @@ How to fix: Set max_tokens and add:
           ]},
           { type: "heading", content: "Run diagnosis view" },
           { type: "text", content: "Click any run to open its full diagnosis. This is the most detailed view in khojo." },
-          { type: "image", src: runDetailImg, alt: "Run detail page showing full diagnosis", caption: "Full run diagnosis with highlighted output, proof sections, and copy-paste fix" },
+          { type: "mockup", variant: "run-detail", caption: "Full run diagnosis with highlighted output, proof sections, and copy-paste fix" },
           { type: "heading", content: "What you see in a diagnosis" },
           { type: "table", headers: ["Section", "What It Shows", "How To Use It"], rows: [
             ["Token pills", "Input/Output/Total token breakdown", "Spot token waste — high output:input ratio = verbose"],
@@ -602,6 +597,169 @@ export default function DocsPage() {
   );
 }
 
+function MockupDiagram({ variant }: { variant: string }) {
+  const base = "rounded-lg border border-border overflow-hidden bg-surface-1 text-[10px]";
+  
+  if (variant === "overview") {
+    return (
+      <div className={base}>
+        <div className="bg-background/50 px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-500/60" />
+          <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+          <div className="w-2 h-2 rounded-full bg-green-500/60" />
+          <span className="ml-2 text-muted-foreground">Overview — My Project</span>
+        </div>
+        <div className="p-3 space-y-3">
+          <div className="grid grid-cols-4 gap-2">
+            {[["Total Runs", "156"], ["Issues Found", "23"], ["Failure Rate", "14.7%"], ["Avg Tokens", "1,240"]].map(([label, val]) => (
+              <div key={label} className="bg-background rounded-md border border-border p-2">
+                <div className="text-muted-foreground">{label}</div>
+                <div className="text-foreground font-semibold text-sm mt-0.5">{val}</div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-background rounded-md border border-border p-2 h-20 flex items-end gap-1">
+            <span className="text-muted-foreground absolute text-[9px] ml-1 mt-1">Runs over time</span>
+            {[12,18,15,22,28,24,32,38,35,42].map((h, i) => (
+              <div key={i} className="flex-1 bg-primary/40 rounded-sm" style={{ height: `${h * 1.5}px` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "analyzer") {
+    return (
+      <div className={base}>
+        <div className="bg-background/50 px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-500/60" />
+          <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+          <div className="w-2 h-2 rounded-full bg-green-500/60" />
+          <span className="ml-2 text-muted-foreground">Instant Analyzer</span>
+        </div>
+        <div className="p-3 space-y-2">
+          <div className="flex gap-2">
+            <div className="flex-1 bg-background rounded-md border border-border p-2">
+              <div className="text-muted-foreground mb-1">Input</div>
+              <div className="text-foreground/70">What is your refund policy?</div>
+            </div>
+            <div className="flex-1 bg-background rounded-md border border-border p-2">
+              <div className="text-muted-foreground mb-1">Output</div>
+              <div className="text-foreground/70">Refunds are available within <span className="bg-red-500/20 text-red-400 px-0.5 rounded">30 days</span> of purchase.</div>
+            </div>
+          </div>
+          <div className="bg-background rounded-md border border-border p-2">
+            <div className="text-muted-foreground mb-1">Context (optional)</div>
+            <div className="text-foreground/70">Policy doc: "Refunds must be requested within <span className="text-green-400">14 days</span>..."</div>
+          </div>
+          <div className="flex justify-end">
+            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-md font-medium">Analyze</div>
+          </div>
+          <div className="border-t border-border pt-2 space-y-1.5">
+            <div className="text-muted-foreground font-medium">Results</div>
+            <div className="flex items-center gap-1.5">
+              <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded text-[9px] font-medium">Hallucination</span>
+              <span className="text-foreground/70">AI stated "30 days" but context says "14 days"</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "issues") {
+    return (
+      <div className={base}>
+        <div className="bg-background/50 px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-500/60" />
+          <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+          <div className="w-2 h-2 rounded-full bg-green-500/60" />
+          <span className="ml-2 text-muted-foreground">Issues</span>
+        </div>
+        <div className="p-3">
+          <table className="w-full">
+            <thead>
+              <tr className="text-muted-foreground border-b border-border">
+                <th className="text-left py-1 font-medium">Type</th>
+                <th className="text-left py-1 font-medium">Description</th>
+                <th className="text-left py-1 font-medium">Confidence</th>
+                <th className="text-left py-1 font-medium">Time</th>
+              </tr>
+            </thead>
+            <tbody className="text-foreground/70">
+              <tr className="border-b border-border/50">
+                <td className="py-1.5"><span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded text-[9px]">Hallucination</span></td>
+                <td className="py-1.5">Refund period incorrect</td>
+                <td className="py-1.5">High</td>
+                <td className="py-1.5">3m ago</td>
+              </tr>
+              <tr className="border-b border-border/50">
+                <td className="py-1.5"><span className="bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded text-[9px]">Incomplete</span></td>
+                <td className="py-1.5">Missing solution steps</td>
+                <td className="py-1.5">High</td>
+                <td className="py-1.5">12m ago</td>
+              </tr>
+              <tr>
+                <td className="py-1.5"><span className="bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px]">Inconsistent</span></td>
+                <td className="py-1.5">Different answers for same query</td>
+                <td className="py-1.5">Medium</td>
+                <td className="py-1.5">1h ago</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "run-detail") {
+    return (
+      <div className={base}>
+        <div className="bg-background/50 px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-red-500/60" />
+          <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+          <div className="w-2 h-2 rounded-full bg-green-500/60" />
+          <span className="ml-2 text-muted-foreground">Run Detail — Diagnosis</span>
+        </div>
+        <div className="p-3 flex gap-3">
+          <div className="flex-1 space-y-2">
+            <div className="bg-background rounded-md border border-border p-2">
+              <div className="text-muted-foreground mb-1 font-medium">Input</div>
+              <div className="text-foreground/70">What is your refund policy?</div>
+            </div>
+            <div className="bg-background rounded-md border border-border p-2">
+              <div className="text-muted-foreground mb-1 font-medium">Output</div>
+              <div className="text-foreground/70">Our refund policy allows returns within <span className="bg-red-500/20 text-red-400 px-0.5 rounded">30 days</span> of purchase. Contact support...</div>
+            </div>
+            <div className="flex gap-2 text-[9px] text-muted-foreground">
+              <span>Tokens: 1,240</span>
+              <span>•</span>
+              <span>Model: gpt-4o</span>
+            </div>
+          </div>
+          <div className="w-48 space-y-2">
+            <div className="bg-red-500/5 border border-red-500/20 rounded-md p-2">
+              <div className="text-red-400 font-medium mb-0.5">❌ What Failed</div>
+              <div className="text-foreground/70">AI stated refund period as 30 days</div>
+            </div>
+            <div className="bg-orange-500/5 border border-orange-500/20 rounded-md p-2">
+              <div className="text-orange-400 font-medium mb-0.5">⚠️ Root Cause</div>
+              <div className="text-foreground/70">Context says 14 days, model ignored it</div>
+            </div>
+            <div className="bg-green-500/5 border border-green-500/20 rounded-md p-2">
+              <div className="text-green-400 font-medium mb-0.5">✅ Fix</div>
+              <div className="text-foreground/70">Add to prompt: "Use exact numbers from context"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function BlockRenderer({ block }: { block: Block }) {
   switch (block.type) {
     case "text":
@@ -613,12 +771,10 @@ function BlockRenderer({ block }: { block: Block }) {
     case "subheading":
       return <h3 className="text-foreground mt-3 mb-1">{block.content}</h3>;
 
-    case "image":
+    case "mockup":
       return (
         <div className="my-3">
-          <div className="rounded-lg border border-border overflow-hidden">
-            <img src={block.src} alt={block.alt} loading="lazy" className="w-full" />
-          </div>
+          <MockupDiagram variant={block.variant} />
           {block.caption && (
             <p className="text-[11px] text-muted-foreground mt-1.5 italic">{block.caption}</p>
           )}

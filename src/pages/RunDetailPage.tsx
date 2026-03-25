@@ -101,7 +101,7 @@ export default function RunDetailPage() {
 
       {/* Header */}
       <div className="flex items-start justify-between mb-1">
-        <h1 className="text-xl font-semibold text-foreground font-mono">run-{shortId}</h1>
+        <h1 className="text-foreground font-mono">run-{shortId}</h1>
         {run.primary_failure && <FailureBadge type={run.primary_failure} />}
       </div>
 

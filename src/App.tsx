@@ -12,6 +12,7 @@ import RunDetailPage from "./pages/RunDetailPage";
 import SessionsPage from "./pages/SessionsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyzerPage from "./pages/AnalyzerPage";
+import DocsPage from "./pages/DocsPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/sessions" element={<ProtectedRoute><AppLayout><SessionsPage /></AppLayout></ProtectedRoute>} />
             <Route path="/analyzer" element={<ProtectedRoute><AppLayout><AnalyzerPage /></AppLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/docs" element={<ProtectedRoute><AppLayout><DocsPage /></AppLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

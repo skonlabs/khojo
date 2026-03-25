@@ -43,8 +43,8 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Send feedback</DialogTitle>
-          <DialogDescription>Help us improve khojo</DialogDescription>
+          <DialogTitle>Contact Support</DialogTitle>
+          <DialogDescription>Report a bug, request a feature, or send feedback</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <Select value={type} onValueChange={setType}>

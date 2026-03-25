@@ -1,23 +1,28 @@
-import { type OutputHighlight } from "@/data/sampleData";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+export interface OutputHighlight {
+  text: string;
+  type: "unsupported" | "wrong" | "missing" | "repeated";
+  note: string;
+}
 
 interface HighlightedOutputProps {
   text: string;
   highlights: OutputHighlight[];
 }
 
-const highlightTypeStyles: Record<OutputHighlight['type'], string> = {
-  unsupported: 'bg-[hsl(var(--hallucination)/0.15)] border-b-2 border-[hsl(var(--hallucination)/0.5)] rounded-sm px-0.5 cursor-help',
-  wrong: 'bg-[hsl(var(--critical)/0.15)] border-b-2 border-[hsl(var(--critical)/0.5)] rounded-sm px-0.5 cursor-help',
-  missing: 'bg-[hsl(var(--info)/0.15)] border-b-2 border-dashed border-[hsl(var(--info)/0.5)] rounded-sm px-0.5 cursor-help',
-  repeated: 'bg-[hsl(var(--warning)/0.15)] border-b-2 border-[hsl(var(--warning)/0.5)] rounded-sm px-0.5 cursor-help',
+const highlightTypeStyles: Record<OutputHighlight["type"], string> = {
+  unsupported: "bg-[hsl(var(--hallucination)/0.15)] border-b-2 border-[hsl(var(--hallucination)/0.5)] rounded-sm px-0.5 cursor-help",
+  wrong: "bg-[hsl(var(--critical)/0.15)] border-b-2 border-[hsl(var(--critical)/0.5)] rounded-sm px-0.5 cursor-help",
+  missing: "bg-[hsl(var(--info)/0.15)] border-b-2 border-dashed border-[hsl(var(--info)/0.5)] rounded-sm px-0.5 cursor-help",
+  repeated: "bg-[hsl(var(--warning)/0.15)] border-b-2 border-[hsl(var(--warning)/0.5)] rounded-sm px-0.5 cursor-help",
 };
 
-const highlightTypeLabels: Record<OutputHighlight['type'], string> = {
-  unsupported: '⚠️ Unsupported claim',
-  wrong: '❌ Incorrect',
-  missing: '🔍 Missing element',
-  repeated: '🔁 Repeated/verbose',
+const highlightTypeLabels: Record<OutputHighlight["type"], string> = {
+  unsupported: "⚠️ Unsupported claim",
+  wrong: "❌ Incorrect",
+  missing: "🔍 Missing element",
+  repeated: "🔁 Repeated/verbose",
 };
 
 export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) {
@@ -25,19 +30,16 @@ export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) 
     return <span className="whitespace-pre-wrap">{text}</span>;
   }
 
-  // Find highlights that exist in the text and apply inline
   const outputHighlights = highlights.filter(h => text.includes(h.text));
-  const missingHighlights = highlights.filter(h => !text.includes(h.text) && h.type === 'missing');
+  const missingHighlights = highlights.filter(h => !text.includes(h.text) && h.type === "missing");
 
   if (outputHighlights.length === 0 && missingHighlights.length === 0) {
     return <span className="whitespace-pre-wrap">{text}</span>;
   }
 
-  // Build segments by finding and marking highlight positions
   type Segment = { text: string; highlight?: OutputHighlight };
   const segments: Segment[] = [];
 
-  // Sort by position in text
   const sorted = outputHighlights
     .map(h => ({ ...h, index: text.indexOf(h.text) }))
     .filter(h => h.index !== -1)
@@ -45,7 +47,7 @@ export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) 
 
   let lastEnd = 0;
   for (const h of sorted) {
-    if (h.index < lastEnd) continue; // skip overlapping
+    if (h.index < lastEnd) continue;
     if (h.index > lastEnd) {
       segments.push({ text: text.slice(lastEnd, h.index) });
     }

@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [sdkTab, setSdkTab] = useState<"javascript" | "python" | "curl">("javascript");
   const [deleting, setDeleting] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
+  const navigate = useNavigate();
   const [regenerating, setRegenerating] = useState(false);
 
   const apiKey = activeProject?.api_key ?? "";

@@ -15,13 +15,14 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { activeProject, refreshProjects, user } = useAuth();
+  const { activeProject, refreshProjects, user, setActiveProject } = useAuth();
   const [projectName, setProjectName] = useState(activeProject?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [sdkTab, setSdkTab] = useState<"javascript" | "python" | "curl">("javascript");
   const [deleting, setDeleting] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   const apiKey = activeProject?.api_key ?? "";

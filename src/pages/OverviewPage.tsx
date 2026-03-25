@@ -155,7 +155,7 @@ export default function OverviewPage() {
               className="text-xs"
             >
               {activeProject.monitoring_enabled ? (
-                <><RadioOff className="h-3.5 w-3.5 mr-1" /> Pause monitoring</>
+                <><WifiOff className="h-3.5 w-3.5 mr-1" /> Pause monitoring</>
               ) : (
                 <><Radio className="h-3.5 w-3.5 mr-1" /> Enable monitoring</>
               )}

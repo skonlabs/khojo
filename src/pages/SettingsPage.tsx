@@ -156,7 +156,7 @@ client.track(
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {activeProject.monitoring_enabled ? <Radio className="h-4 w-4 text-success" /> : <RadioOff className="h-4 w-4 text-muted-foreground" />}
+            {activeProject.monitoring_enabled ? <Radio className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
             <div>
               <h3 className="text-sm font-medium text-foreground">Real-time monitoring</h3>
               <p className="text-xs text-muted-foreground">When off, the API will reject incoming runs for this project</p>

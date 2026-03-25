@@ -182,7 +182,7 @@ export default function OverviewPage() {
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Sessions</span>
-          <div className="text-lg font-semibold text-foreground mt-1">{stats!.uniqueSessions}</div>
+          <div className="text-base font-semibold text-foreground mt-1">{stats!.uniqueSessions}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Pending eval</span>

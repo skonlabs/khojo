@@ -178,7 +178,7 @@ export default function OverviewPage() {
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Token waste</span>
-          <div className="text-base font-semibold text-foreground mt-1">{stats!.wasteRate.toFixed(1)}%</div>
+          <div className="font-semibold text-foreground mt-1 text-2xl text-center">{stats!.wasteRate.toFixed(1)}%</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Sessions</span>

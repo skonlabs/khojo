@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Cell,
   LineChart, Line, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { Activity, AlertTriangle, Zap, TrendingUp, Radio, RadioOff } from "lucide-react";
+import { Activity, AlertTriangle, Zap, TrendingUp, Radio, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

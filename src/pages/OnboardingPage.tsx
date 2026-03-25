@@ -83,7 +83,7 @@ client.track(
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
               <Search className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold text-foreground">khojo</span>
+            <span className="text-lg font-semibold text-foreground">khojo</span>
           </div>
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             {[1, 2, 3].map((s) => (

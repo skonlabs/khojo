@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CodeBlock } from "@/components/CodeBlock";
 import { toast } from "sonner";
-import { Copy, Check, Key, Eye, EyeOff, Trash2, Radio, WifiOff } from "lucide-react";
+import { Copy, Check, Key, Eye, EyeOff, Trash2, Radio, WifiOff, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {

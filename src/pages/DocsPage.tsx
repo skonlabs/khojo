@@ -760,7 +760,7 @@ function MockupDiagram({ variant }: { variant: string }) {
   return null;
 }
 
-
+function BlockRenderer({ block }: { block: Block }) {
   switch (block.type) {
     case "text":
       return <p className="text-xs text-foreground/80 leading-relaxed" dangerouslySetInnerHTML={{ __html: md(block.content) }} />;

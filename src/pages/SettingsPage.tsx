@@ -93,6 +93,23 @@ export default function SettingsPage() {
     else toast.success("All runs deleted for this project");
   };
 
+  const deleteProject = async () => {
+    if (!activeProject) return;
+    setDeletingProject(true);
+    // Delete all runs first
+    await supabase.from("runs").delete().eq("project_id", activeProject.id);
+    // Delete the project
+    const { error } = await supabase.from("projects").delete().eq("id", activeProject.id);
+    setDeletingProject(false);
+    if (error) {
+      toast.error("Failed to delete project");
+    } else {
+      toast.success(`Project "${activeProject.name}" deleted`);
+      await refreshProjects();
+      navigate("/");
+    }
+  };
+
   const maskedKey = `${"•".repeat(Math.max(0, apiKey.length - 8))}${apiKey.slice(-8)}`;
 
   const jsSnippet = `import { trackAI } from '@khojo/sdk'

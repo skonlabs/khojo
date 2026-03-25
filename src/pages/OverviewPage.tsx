@@ -99,7 +99,7 @@ export default function OverviewPage() {
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-foreground">
             {activeProject ? `Waiting for runs on "${activeProject.name}"...` : "Waiting for your first run..."}
           </h2>
           <p className="text-sm text-muted-foreground">Get started in seconds — no SDK required.</p>

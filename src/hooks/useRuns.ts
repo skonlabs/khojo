@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -38,6 +38,8 @@ export interface Run {
 export function useRuns() {
   const { user, activeProject } = useAuth();
   const queryClient = useQueryClient();
+  // Track whether we have seen any runs yet, to distinguish new vs update events
+  const initializedRef = useRef(false);
 
   const query = useQuery({
     queryKey: ["runs", user?.id, activeProject?.id],
@@ -51,31 +53,54 @@ export function useRuns() {
         q = q.eq("project_id", activeProject.id);
       }
       const { data, error } = await q;
-      if (error) throw error;
+      if (error) {
+        console.error(JSON.stringify({ level: "error", message: "useRuns fetch failed", error: error.message }));
+        throw error;
+      }
+      initializedRef.current = true;
       return (data ?? []) as unknown as Run[];
     },
     enabled: !!user,
   });
 
-  // Realtime subscription
+  // Realtime subscription — one channel per user (not per render).
+  // Channel name is scoped to userId so project switches don't create
+  // duplicate channels; the query key handles project filtering.
   useEffect(() => {
     if (!user) return;
+
+    const channelName = `runs-realtime-${user.id}`;
+
     const channel = supabase
-      .channel("runs-realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "runs", filter: `user_id=eq.${user.id}` },
-        () => {
+        {
+          event: "*",
+          schema: "public",
+          table: "runs",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
           queryClient.invalidateQueries({ queryKey: ["runs", user.id, activeProject?.id] });
-          toast.info("New run received");
+          // Only toast for INSERT events (new run received), not UPDATE (evaluation complete)
+          if (payload.eventType === "INSERT" && initializedRef.current) {
+            toast.info("New run received");
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.error(
+            JSON.stringify({ level: "error", message: "Realtime subscription error", user_id: user.id })
+          );
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, activeProject?.id, queryClient]);
+  }, [user?.id, activeProject?.id, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return query;
 }
@@ -92,7 +117,10 @@ export function useRun(id: string | undefined) {
         .select("*")
         .eq("id", id)
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error(JSON.stringify({ level: "error", message: "useRun fetch failed", run_id: id, error: error.message }));
+        throw error;
+      }
       return data as unknown as Run;
     },
     enabled: !!user && !!id,

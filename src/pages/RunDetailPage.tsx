@@ -27,9 +27,14 @@ export default function RunDetailPage() {
 
   const toggleDismiss = async () => {
     if (!run) return;
-    const { error } = await supabase.from("runs").update({ dismissed: !run.dismissed } as any).eq("id", run.id);
-    if (error) toast.error("Failed");
-    else { toast.success(run.dismissed ? "Restored" : "Dismissed"); refetch(); }
+    const { error } = await supabase.from("runs").update({ dismissed: !run.dismissed }).eq("id", run.id);
+    if (error) {
+      toast.error("Failed to update");
+      console.error(JSON.stringify({ level: "error", message: "toggleDismiss failed", run_id: run.id, error: error.message }));
+    } else {
+      toast.success(run.dismissed ? "Restored" : "Dismissed");
+      refetch();
+    }
   };
 
   const highlightedOutput = useMemo(() => {
@@ -52,17 +57,33 @@ export default function RunDetailPage() {
 
     if (highlights.length === 0) return { element: <span>{text}</span>, hasHighlights: false };
 
+    // Sort by start position, then deduplicate overlapping ranges by keeping
+    // whichever ends later (prevents slicing out-of-bounds on overlapping proof).
     highlights.sort((a, b) => a.start - b.start);
+    const deduped: typeof highlights = [];
+    for (const h of highlights) {
+      const prev = deduped[deduped.length - 1];
+      if (prev && h.start < prev.end) {
+        // Overlapping — extend the previous range to cover both
+        prev.end = Math.max(prev.end, h.end);
+      } else {
+        deduped.push({ ...h });
+      }
+    }
+
     const parts: JSX.Element[] = [];
     let lastEnd = 0;
 
-    for (const h of highlights) {
-      if (h.start > lastEnd) parts.push(<span key={lastEnd}>{text.slice(lastEnd, h.start)}</span>);
+    for (const h of deduped) {
+      // Clamp values defensively to the text bounds
+      const start = Math.max(0, Math.min(h.start, text.length));
+      const end = Math.max(start, Math.min(h.end, text.length));
+      if (start > lastEnd) parts.push(<span key={lastEnd}>{text.slice(lastEnd, start)}</span>);
       const cls = h.type === "error"
         ? "highlight-error cursor-help"
         : "bg-[hsl(var(--warning)/0.15)] border-b-2 border-[hsl(var(--warning)/0.5)] px-0.5 rounded-sm cursor-help";
-      parts.push(<mark key={h.start} className={cls} title={h.type === "error" ? "Unsupported claim" : "Repeated content"}>{text.slice(h.start, h.end)}</mark>);
-      lastEnd = h.end;
+      parts.push(<mark key={start} className={cls} title={h.type === "error" ? "Unsupported claim" : "Repeated content"}>{text.slice(start, end)}</mark>);
+      lastEnd = end;
     }
     if (lastEnd < text.length) parts.push(<span key={lastEnd}>{text.slice(lastEnd)}</span>);
     return { element: <>{parts}</>, hasHighlights: true };

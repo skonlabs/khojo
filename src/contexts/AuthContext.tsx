@@ -57,29 +57,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
+    if (error && error.code !== "PGRST116") {
+      console.error(JSON.stringify({ level: "error", message: "fetchProfile failed", error: error.message }));
+    }
     setProfile(data as Profile | null);
   };
 
   const fetchProjects = useCallback(async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("projects")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error(JSON.stringify({ level: "error", message: "fetchProjects failed", error: error.message }));
+    }
+
     const list = (data ?? []) as unknown as Project[];
     setProjects(list);
-    // Auto-select first project if none selected
-    if (list.length > 0 && (!activeProjectId || !list.find(p => p.id === activeProjectId))) {
-      const firstId = list[0].id;
-      setActiveProjectIdState(firstId);
-      localStorage.setItem(ACTIVE_PROJECT_KEY, firstId);
-    }
-  }, [activeProjectId]);
+
+    // Validate stored project ID against the freshly-fetched list.
+    // If the stored ID doesn't match any project (e.g. deleted externally),
+    // fall back to the first project and update localStorage.
+    setActiveProjectIdState((prev) => {
+      if (list.length === 0) {
+        localStorage.removeItem(ACTIVE_PROJECT_KEY);
+        return null;
+      }
+      const stillValid = prev && list.some((p) => p.id === prev);
+      if (stillValid) return prev;
+      const fallbackId = list[0].id;
+      localStorage.setItem(ACTIVE_PROJECT_KEY, fallbackId);
+      return fallbackId;
+    });
+  }, []); // No deps — avoids stale closure capturing old activeProjectId
 
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
@@ -96,34 +113,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
+      async (_event, sess) => {
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        if (sess?.user) {
+          // Use setTimeout(0) to avoid Supabase auth deadlock in the callback
           setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchProjects(session.user.id);
+            fetchProfile(sess.user.id);
+            fetchProjects(sess.user.id);
           }, 0);
         } else {
           setProfile(null);
           setProjects([]);
+          localStorage.removeItem(ACTIVE_PROJECT_KEY);
+          setActiveProjectIdState(null);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchProjects(session.user.id);
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      setSession(sess);
+      setUser(sess?.user ?? null);
+      if (sess?.user) {
+        fetchProfile(sess.user.id);
+        fetchProjects(sess.user.id);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -131,9 +151,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setProjects([]);
+    localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    setActiveProjectIdState(null);
   };
 
-  const activeProject = projects.find(p => p.id === activeProjectId) ?? projects[0] ?? null;
+  // activeProjectId is always validated against the live projects list
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? projects[0] ?? null;
 
   return (
     <AuthContext.Provider value={{

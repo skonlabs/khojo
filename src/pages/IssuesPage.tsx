@@ -43,9 +43,14 @@ export default function IssuesPage() {
   const paged = issues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const dismissRun = async (run: Run) => {
-    const { error } = await supabase.from("runs").update({ dismissed: !run.dismissed } as any).eq("id", run.id);
-    if (error) toast.error("Failed to update");
-    else { toast.success(run.dismissed ? "Restored" : "Dismissed"); refetch(); }
+    const { error } = await supabase.from("runs").update({ dismissed: !run.dismissed }).eq("id", run.id);
+    if (error) {
+      toast.error("Failed to update");
+      console.error(JSON.stringify({ level: "error", message: "dismissRun failed", run_id: run.id, error: error.message }));
+    } else {
+      toast.success(run.dismissed ? "Restored" : "Dismissed");
+      refetch();
+    }
   };
 
   if (isLoading) {

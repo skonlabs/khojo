@@ -133,7 +133,7 @@ export default function OverviewPage() {
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Project health</h1>
+          <h1 className="text-foreground">Project health</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {activeProject?.name ?? "All projects"} · Last 30 days · {stats!.total} runs
           </p>

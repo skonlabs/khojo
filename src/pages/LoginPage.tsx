@@ -33,9 +33,9 @@ export default function LoginPage() {
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
               <Search className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold text-foreground">khojo</span>
+            <span className="text-lg font-semibold text-foreground">khojo</span>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">Sign in</h1>
+          <h1 className="text-foreground">Sign in</h1>
           <p className="text-sm text-muted-foreground">Enter your credentials to continue</p>
         </div>
 

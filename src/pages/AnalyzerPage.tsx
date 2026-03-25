@@ -196,7 +196,7 @@ export default function AnalyzerPage() {
         <button
           onClick={handleAnalyze}
           disabled={!input.trim() || !output.trim() || loading}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           Analyze
@@ -245,7 +245,7 @@ function Field({ label, value, onChange, placeholder, rows = 2 }: { label: strin
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full bg-surface-1 border border-border rounded-md p-3 text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+        className="w-full bg-surface-1 border border-border rounded-md p-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
       />
     </div>
   );

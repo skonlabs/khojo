@@ -99,7 +99,7 @@ export default function OverviewPage() {
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-foreground">
             {activeProject ? `Waiting for runs on "${activeProject.name}"...` : "Waiting for your first run..."}
           </h2>
           <p className="text-sm text-muted-foreground">Get started in seconds — no SDK required.</p>
@@ -133,7 +133,7 @@ export default function OverviewPage() {
     <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Project health</h1>
+          <h1 className="text-foreground">Project health</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {activeProject?.name ?? "All projects"} · Last 30 days · {stats!.total} runs
           </p>
@@ -174,19 +174,19 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Total tokens</span>
-          <div className="text-lg font-semibold text-foreground mt-1">{stats!.totalTokens.toLocaleString()}</div>
+          <div className="text-base font-semibold text-foreground mt-1">{stats!.totalTokens.toLocaleString()}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Token waste</span>
-          <div className="text-lg font-semibold text-foreground mt-1">{stats!.wasteRate.toFixed(1)}%</div>
+          <div className="text-base font-semibold text-foreground mt-1">{stats!.wasteRate.toFixed(1)}%</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Sessions</span>
-          <div className="text-lg font-semibold text-foreground mt-1">{stats!.uniqueSessions}</div>
+          <div className="text-base font-semibold text-foreground mt-1">{stats!.uniqueSessions}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Pending eval</span>
-          <div className={`text-lg font-semibold mt-1 ${stats!.pending > 0 ? "text-warning" : "text-success"}`}>{stats!.pending}</div>
+          <div className={`text-base font-semibold mt-1 ${stats!.pending > 0 ? "text-warning" : "text-success"}`}>{stats!.pending}</div>
         </div>
       </div>
 
@@ -252,7 +252,7 @@ function StatCard({ icon: Icon, label, value, valueClass }: { icon: any; label: 
         <Icon className="h-4 w-4" />
         <span className="text-xs">{label}</span>
       </div>
-      <div className={`text-2xl font-semibold ${valueClass ?? "text-foreground"}`}>{value}</div>
+      <div className={`text-lg font-semibold ${valueClass ?? "text-foreground"}`}>{value}</div>
     </div>
   );
 }

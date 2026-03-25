@@ -83,7 +83,7 @@ client.track(
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
               <Search className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold text-foreground">khojo</span>
+            <span className="text-lg font-semibold text-foreground">khojo</span>
           </div>
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             {[1, 2, 3].map((s) => (
@@ -102,7 +102,7 @@ client.track(
         {step === 1 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Name your project</h2>
+              <h2 className="text-foreground">Name your project</h2>
               <p className="text-sm text-muted-foreground mt-1">What are you building?</p>
             </div>
             <div className="space-y-2">
@@ -123,7 +123,7 @@ client.track(
         {step === 2 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Your API key</h2>
+              <h2 className="text-foreground">Your API key</h2>
               <p className="text-sm text-muted-foreground mt-1">Use this to authenticate SDK calls</p>
             </div>
             <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ client.track(
         {step === 3 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Get started</h2>
+              <h2 className="text-foreground">Get started</h2>
               <p className="text-sm text-muted-foreground mt-1">Choose how you want to debug your AI outputs</p>
             </div>
 

@@ -27,9 +27,9 @@ const mockAnalyze = (input: string, output: string, context: string): AnalysisRe
 
   // Check for hallucination by comparing context vs output
   if (context) {
-    const contextNumbers = context.match(/\d+/g) || [];
-    const outputNumbers = output.match(/\d+/g) || [];
-    const mismatchedNums = outputNumbers.filter((n: string) => !contextNumbers.includes(n) && parseInt(n) > 1);
+    const contextNumbers: string[] = context.match(/\d+/g) || [];
+    const outputNumbers: string[] = output.match(/\d+/g) || [];
+    const mismatchedNums = outputNumbers.filter(n => !contextNumbers.includes(n) && parseInt(n) > 1);
 
     if (mismatchedNums.length > 0) {
       results.failureTypes.push('hallucination');

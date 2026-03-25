@@ -3,6 +3,12 @@ export type FailureType = 'hallucination' | 'incomplete' | 'irrelevant' | 'verbo
 export type Confidence = 'high' | 'medium' | 'low';
 export type Priority = 'critical' | 'improvement';
 
+export interface OutputHighlight {
+  text: string;
+  type: 'unsupported' | 'missing' | 'repeated' | 'wrong';
+  note: string;
+}
+
 export interface AIRun {
   id: string;
   input: string;
@@ -22,6 +28,8 @@ export interface AIRun {
   whyFailed: string;
   rootCause: string;
   fix: string;
+  highlights: OutputHighlight[];
+  dismissed?: boolean;
 }
 
 export interface IssueGroup {
@@ -52,6 +60,10 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model ignored retrieved context and relied on parametric knowledge. Likely cause: context not placed in a high-attention position in the prompt template.',
     fix: `- prompt: "Answer the user's question."
 + prompt: "Answer the user's question using ONLY the provided context. Do not use prior knowledge. If the context doesn't contain the answer, say so."`,
+    highlights: [
+      { text: '30 days', type: 'wrong', note: 'Context says 14 days' },
+      { text: '3-5 business days', type: 'wrong', note: 'Context says 7-10 business days' },
+    ],
   },
   {
     id: 'run-002',
@@ -71,6 +83,9 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model ran out of generation budget or failed to plan for both parts of the query. No instruction to ensure all parts of the question are addressed.',
     fix: `- prompt: "Answer the user's question comprehensively."
 + prompt: "Answer the user's question. Ensure you address ALL parts of their query. If they ask for X and Y, include both X and Y in your response."`,
+    highlights: [
+      { text: 'solutions', type: 'missing', note: 'Solutions section completely absent from response' },
+    ],
   },
   {
     id: 'run-003',
@@ -91,6 +106,11 @@ export const sampleRuns: AIRun[] = [
     fix: `// In retrieval pipeline:
 - const results = await search(query, { limit: 3 });
 + const results = await search(query, { limit: 5, rerank: true, min_score: 0.82 });`,
+    highlights: [
+      { text: 'standard shipping takes 3-5 business days', type: 'unsupported', note: 'Entire response is about shipping, not refunds' },
+      { text: 'free shipping on orders over $50', type: 'unsupported', note: 'Shipping info, not refund info' },
+      { text: 'Express shipping', type: 'unsupported', note: 'Wrong topic entirely' },
+    ],
   },
   {
     id: 'run-004',
@@ -111,6 +131,12 @@ export const sampleRuns: AIRun[] = [
     fix: `- system: "You are a helpful assistant."
 + system: "You are a helpful assistant. Be concise. Use numbered steps for how-to questions. Aim for under 150 words."
 + max_tokens: 200`,
+    highlights: [
+      { text: 'The login page is where you enter your credentials.', type: 'repeated', note: 'Redundant explanation' },
+      { text: 'On this new page, you will see a form. The form will ask you to enter your email address.', type: 'repeated', note: 'Unnecessarily verbose' },
+      { text: 'Make sure it is the correct email address.', type: 'repeated', note: 'Filler content' },
+      { text: 'After you click submit, the system will send you an email. Check your email inbox. The email might take a few minutes to arrive.', type: 'repeated', note: 'Over-elaborated' },
+    ],
   },
   {
     id: 'run-005',
@@ -131,11 +157,15 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model truncated the list. No instruction to be exhaustive when listing from provided context.',
     fix: `- prompt: "Answer based on the context."
 + prompt: "Answer based on the context. When listing items from the context, include ALL items — do not truncate or summarize lists."`,
+    highlights: [
+      { text: 'PHP, C#, Rust, Kotlin', type: 'missing', note: '4 languages from context omitted' },
+    ],
   },
   {
     id: 'run-006',
     input: 'Summarize the quarterly earnings report',
     output: 'Q3 2025 showed revenue of $142M, up 23% YoY. Operating margin improved to 18%. Key growth drivers included enterprise adoption (+45%) and international expansion. The company raised full-year guidance to $580M.',
+    context: 'Q3 2025 Revenue: $138M (up 19% YoY). Operating margin: 15.2%. Enterprise growth: 34%. Full-year guidance: $550M.',
     failureTypes: ['hallucination'],
     confidence: 'high',
     priority: 'critical',
@@ -145,12 +175,18 @@ export const sampleRuns: AIRun[] = [
     timestamp: '2026-03-25T10:38:42Z',
     sessionId: 'sess-a6',
     tags: ['finance', 'reporting'],
-    context: 'Q3 2025 Revenue: $138M (up 19% YoY). Operating margin: 15.2%. Enterprise growth: 34%. Full-year guidance: $550M.',
     whatFailed: 'Revenue stated as $142M (actual: $138M), growth as 23% (actual: 19%), margin as 18% (actual: 15.2%)',
     whyFailed: 'Four numerical values in the output differ from the context: revenue ($142M vs $138M), YoY growth (23% vs 19%), operating margin (18% vs 15.2%), guidance ($580M vs $550M).',
     rootCause: 'Model hallucinated more optimistic numbers. Financial data requires exact reproduction. No instruction to quote numbers verbatim from source.',
     fix: `- prompt: "Summarize the report."
 + prompt: "Summarize the report. Quote all numbers, percentages, and financial figures EXACTLY as they appear in the source. Do not round or estimate."`,
+    highlights: [
+      { text: '$142M', type: 'wrong', note: 'Actual: $138M' },
+      { text: '23%', type: 'wrong', note: 'Actual: 19%' },
+      { text: '18%', type: 'wrong', note: 'Actual: 15.2%' },
+      { text: '+45%', type: 'wrong', note: 'Actual: 34%' },
+      { text: '$580M', type: 'wrong', note: 'Actual: $550M' },
+    ],
   },
   {
     id: 'run-007',
@@ -171,6 +207,10 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model generated a generic response instead of using the specific order data from context. The retrieval result was correct but the model ignored it.',
     fix: `- prompt: "Help the user with their order inquiry."
 + prompt: "Help the user with their order inquiry. Use the EXACT status from the order data. Never guess or generalize order status."`,
+    highlights: [
+      { text: 'currently being processed', type: 'wrong', note: 'Actually delivered on March 20' },
+      { text: 'should ship within 2-3 business days', type: 'wrong', note: 'Already shipped and delivered' },
+    ],
   },
   {
     id: 'run-008',
@@ -190,6 +230,9 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model generated a description instead of a comparison. No structured output format enforced for comparison queries.',
     fix: `- prompt: "Answer the user's technical question."
 + prompt: "Answer the user's technical question. For comparison queries, use a structured format covering both/all items with the same criteria."`,
+    highlights: [
+      { text: 'Vue', type: 'missing', note: 'Vue not covered at all despite being in the question' },
+    ],
   },
   {
     id: 'run-009',
@@ -210,6 +253,7 @@ export const sampleRuns: AIRun[] = [
     fix: `- temperature: 0.7
 + temperature: 0
 + prompt: "Answer factual questions in a single sentence with no elaboration."`,
+    highlights: [],
   },
   {
     id: 'run-010',
@@ -231,6 +275,14 @@ export const sampleRuns: AIRun[] = [
     fix: `- system: "You are a sales assistant."
 + system: "You are a sales assistant. ONLY describe features listed in the provided context. Never invent or add features not in the source material."
 + // Move context to end of prompt (recency bias)`,
+    highlights: [
+      { text: 'Advanced Analytics', type: 'unsupported', note: 'Not in context — fabricated' },
+      { text: 'Priority Support', type: 'unsupported', note: 'Not in context — fabricated' },
+      { text: 'Custom Integrations', type: 'unsupported', note: 'Not in context — fabricated' },
+      { text: 'SSO & SAML authentication', type: 'missing', note: 'Actual feature #1 missing' },
+      { text: '99.99% SLA', type: 'missing', note: 'Actual feature #2 missing' },
+      { text: 'Dedicated account manager', type: 'missing', note: 'Actual feature #3 missing' },
+    ],
   },
   {
     id: 'run-011',
@@ -249,6 +301,7 @@ export const sampleRuns: AIRun[] = [
     whyFailed: '',
     rootCause: '',
     fix: '',
+    highlights: [],
   },
   {
     id: 'run-012',
@@ -268,6 +321,17 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model exhibiting repetitive pattern. No deduplication instruction. Temperature and frequency_penalty not tuned.',
     fix: `+ frequency_penalty: 0.5
 + system: "...Be concise. Avoid repeating terms unnecessarily. Use pronouns after first mention."`,
+    highlights: [
+      { text: 'OAuth 2.0 allows', type: 'repeated', note: 'Term already introduced' },
+      { text: 'The OAuth 2.0 flow', type: 'repeated', note: '"OAuth 2.0" repeated' },
+      { text: 'In OAuth 2.0, the client', type: 'repeated', note: 'Redundant restatement' },
+      { text: 'The authorization server in OAuth 2.0', type: 'repeated', note: 'Unnecessary repetition' },
+      { text: 'After authentication in OAuth 2.0', type: 'repeated', note: 'Still repeating' },
+      { text: 'OAuth 2.0 then issues', type: 'repeated', note: 'Could use pronoun' },
+      { text: 'The authorization code in OAuth 2.0', type: 'repeated', note: 'Subject already clear' },
+      { text: 'OAuth 2.0 tokens', type: 'repeated', note: 'Context already established' },
+      { text: 'The access token in OAuth 2.0', type: 'repeated', note: '10th repetition' },
+    ],
   },
   {
     id: 'run-013',
@@ -288,6 +352,9 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'Model defaulted to popular general-purpose database recommendation, ignoring domain-specific context. Context authority not established.',
     fix: `- prompt: "Recommend a database."
 + prompt: "Recommend a database based ONLY on the options in the provided context. Explain trade-offs between the listed options."`,
+    highlights: [
+      { text: 'MongoDB', type: 'unsupported', note: 'Not in context — context lists TimescaleDB, InfluxDB, QuestDB, ClickHouse' },
+    ],
   },
   {
     id: 'run-014',
@@ -307,6 +374,13 @@ export const sampleRuns: AIRun[] = [
     whyFailed: 'Context has 4 tiers (Starter/Growth/Scale/Enterprise) but output shows 3 different tiers (Free/Pro/Enterprise) with different prices, limits, and names.',
     rootCause: 'Model generated generic SaaS pricing instead of using provided pricing data. Same pattern as run-010 — context ignored for common patterns.',
     fix: `+ system: "When answering about pricing, reproduce the EXACT tier names, prices, and limits from the provided data. Do not use generic pricing templates."`,
+    highlights: [
+      { text: 'Free', type: 'wrong', note: 'Actual tier: Starter' },
+      { text: '100 API calls/day', type: 'wrong', note: 'Actual: 500 calls/day' },
+      { text: 'Pro', type: 'wrong', note: 'Actual tier: Growth' },
+      { text: '$29/month', type: 'wrong', note: 'Actual: $49/month' },
+      { text: '10,000 API calls/day', type: 'wrong', note: 'Actual: 50,000 calls/day' },
+    ],
   },
   {
     id: 'run-015',
@@ -326,6 +400,11 @@ export const sampleRuns: AIRun[] = [
     rootCause: 'System prompt does not constrain output to translation-only. Model defaults to being "helpful" by adding context.',
     fix: `- system: "You are a translator."
 + system: "You are a translator. Respond with ONLY the translation. No explanations, notes, or cultural context unless explicitly asked."`,
+    highlights: [
+      { text: 'Note: This is the informal version.', type: 'repeated', note: 'Unsolicited elaboration' },
+      { text: 'The informal version is commonly used among friends, family, and people of similar age.', type: 'repeated', note: 'Cultural context not requested' },
+      { text: 'In some Latin American countries, the informal version is more widely accepted even in semi-formal situations.', type: 'repeated', note: 'Excessive commentary' },
+    ],
   },
 ];
 

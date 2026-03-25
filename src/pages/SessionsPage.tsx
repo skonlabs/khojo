@@ -50,7 +50,7 @@ export default function SessionsPage() {
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
-      <h1 className="text-xl font-semibold text-foreground">Sessions</h1>
+      <h1 className="text-foreground">Sessions</h1>
       <div className="space-y-3">
         {sessions.grouped.map((session) => (
           <Collapsible key={session.id}>

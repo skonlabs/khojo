@@ -45,7 +45,7 @@ export default function SignUpPage() {
             </div>
             <span className="text-lg font-semibold text-foreground">khojo</span>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">Create account</h1>
+          <h1 className="text-foreground">Create account</h1>
           <p className="text-sm text-muted-foreground">Start debugging your AI outputs</p>
         </div>
 

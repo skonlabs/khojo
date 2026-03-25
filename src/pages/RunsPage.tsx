@@ -31,7 +31,7 @@ export default function RunsPage() {
 
   return (
     <div className="p-6 space-y-4 animate-fade-in">
-      <h1 className="text-xl font-semibold text-foreground">Runs</h1>
+      <h1 className="text-foreground">Runs</h1>
       <div className="flex gap-3">
         <Input placeholder="Search runs..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
         <Select value={typeFilter} onValueChange={setTypeFilter}>

@@ -75,7 +75,7 @@ export default function IssuesPage() {
   return (
     <div className="p-6 space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold text-foreground">All issues</h1>
+        <h1 className="text-foreground">All issues</h1>
         <span className="text-xs bg-surface-2 text-muted-foreground rounded-full px-2 py-0.5">{issues.length}</span>
       </div>
 

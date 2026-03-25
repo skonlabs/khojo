@@ -35,7 +35,7 @@ export default function LoginPage() {
             </div>
             <span className="text-lg font-semibold text-foreground">khojo</span>
           </div>
-          <h1 className="text-lg font-semibold text-foreground">Sign in</h1>
+          <h1 className="text-foreground">Sign in</h1>
           <p className="text-sm text-muted-foreground">Enter your credentials to continue</p>
         </div>
 

@@ -252,7 +252,7 @@ function StatCard({ icon: Icon, label, value, valueClass }: { icon: any; label: 
         <Icon className="h-4 w-4" />
         <span className="text-xs">{label}</span>
       </div>
-      <div className={`text-2xl font-semibold ${valueClass ?? "text-foreground"}`}>{value}</div>
+      <div className={`text-lg font-semibold ${valueClass ?? "text-foreground"}`}>{value}</div>
     </div>
   );
 }

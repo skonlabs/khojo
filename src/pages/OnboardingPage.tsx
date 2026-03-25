@@ -143,7 +143,7 @@ client.track(
         {step === 3 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Get started</h2>
+              <h2 className="text-foreground">Get started</h2>
               <p className="text-sm text-muted-foreground mt-1">Choose how you want to debug your AI outputs</p>
             </div>
 

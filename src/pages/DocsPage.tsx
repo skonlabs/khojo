@@ -74,7 +74,7 @@ const docSections: DocSection[] = [
             "Optionally add **Context** — the documents or knowledge base the AI should have used",
             "Click **Analyze**",
           ]},
-          { type: "image", src: analyzerImg, alt: "Instant Analyzer showing analysis results with hallucination detection", caption: "The Instant Analyzer detects a hallucination — the AI said \"30 days\" but the context says \"14 days\"" },
+          { type: "mockup", variant: "analyzer", caption: "The Instant Analyzer detects a hallucination — the AI said \"30 days\" but the context says \"14 days\"" },
           { type: "callout", variant: "tip", content: "Click **\"Load Example\"** to see a pre-filled hallucination scenario and understand the output format." },
           { type: "heading", content: "Step 2: Read the diagnosis" },
           { type: "text", content: "Every analysis returns four sections:" },

@@ -277,7 +277,7 @@ How to fix: Set max_tokens and add:
           ]},
           { type: "heading", content: "Run diagnosis view" },
           { type: "text", content: "Click any run to open its full diagnosis. This is the most detailed view in khojo." },
-          { type: "image", src: runDetailImg, alt: "Run detail page showing full diagnosis", caption: "Full run diagnosis with highlighted output, proof sections, and copy-paste fix" },
+          { type: "mockup", variant: "run-detail", caption: "Full run diagnosis with highlighted output, proof sections, and copy-paste fix" },
           { type: "heading", content: "What you see in a diagnosis" },
           { type: "table", headers: ["Section", "What It Shows", "How To Use It"], rows: [
             ["Token pills", "Input/Output/Total token breakdown", "Spot token waste — high output:input ratio = verbose"],

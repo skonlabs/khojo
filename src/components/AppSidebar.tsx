@@ -22,6 +22,10 @@ const secondaryItems = [
   { title: "Project Settings", url: "/settings", icon: Settings },
 ];
 
+const helpItems = [
+  { title: "Docs", url: "/docs", icon: BookOpen },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";

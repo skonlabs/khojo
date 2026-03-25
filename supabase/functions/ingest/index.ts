@@ -1,0 +1,108 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const apiKey = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({ error: "Missing API key" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Look up API key
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("api_key", apiKey)
+      .maybeSingle();
+
+    if (profileError || !profile) {
+      return new Response(
+        JSON.stringify({ error: "Invalid API key" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+
+    if (!body.input || !body.output) {
+      return new Response(
+        JSON.stringify({ error: "input and output are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Token estimation
+    const inputTokens = Math.ceil(body.input.split(" ").length / 0.75);
+    const outputTokens = Math.ceil(body.output.split(" ").length / 0.75);
+    const contextTokens = body.context
+      ? Math.ceil(body.context.split(" ").length / 0.75)
+      : 0;
+    const totalTokens = inputTokens + outputTokens + contextTokens;
+
+    const { data: run, error: insertError } = await supabase
+      .from("runs")
+      .insert({
+        user_id: profile.id,
+        input: body.input,
+        output: body.output,
+        context: body.context ?? null,
+        prompt: body.prompt ?? null,
+        model: body.model ?? null,
+        session_id: body.sessionId ?? body.session_id ?? null,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        context_tokens: contextTokens,
+        total_tokens: totalTokens,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("Insert error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to insert run" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Trigger evaluation asynchronously — don't await
+    const evaluateUrl = `${supabaseUrl}/functions/v1/evaluate`;
+    fetch(evaluateUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ run_id: run.id }),
+    }).catch((e) => console.error("Evaluate trigger failed:", e));
+
+    return new Response(
+      JSON.stringify({ id: run.id, status: "received" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("Ingest error:", err);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

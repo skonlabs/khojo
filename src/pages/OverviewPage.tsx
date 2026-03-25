@@ -174,7 +174,7 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Total tokens</span>
-          <div className="text-lg font-semibold text-foreground mt-1">{stats!.totalTokens.toLocaleString()}</div>
+          <div className="text-base font-semibold text-foreground mt-1">{stats!.totalTokens.toLocaleString()}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Token waste</span>

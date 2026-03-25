@@ -245,7 +245,7 @@ function Field({ label, value, onChange, placeholder, rows = 2 }: { label: strin
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full bg-surface-1 border border-border rounded-md p-3 text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+        className="w-full bg-surface-1 border border-border rounded-md p-3 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
       />
     </div>
   );

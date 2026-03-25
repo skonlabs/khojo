@@ -176,7 +176,7 @@ await client.track({
             "You're evaluating a **RAG pipeline** and want to validate retrieval quality",
           ]},
           { type: "heading", content: "How to use it" },
-          { type: "image", src: analyzerImg, alt: "Instant Analyzer interface", caption: "Paste input, output, and context → click Analyze → get actionable diagnosis" },
+          { type: "mockup", variant: "analyzer", caption: "Paste input, output, and context → click Analyze → get actionable diagnosis" },
           { type: "heading", content: "Fields explained" },
           { type: "table", headers: ["Field", "Required?", "What To Put Here", "Why It Matters"], rows: [
             ["Input", "Yes", "The user's question or query", "Needed to check relevance and completeness"],

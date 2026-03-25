@@ -15,7 +15,7 @@ const pages = [
   { name: "Runs", path: "/runs", icon: Terminal },
   { name: "Sessions", path: "/sessions", icon: Command },
   { name: "Analyzer", path: "/analyzer", icon: Zap },
-  { name: "Settings", path: "/settings", icon: Settings },
+  { name: "Project Settings", path: "/settings", icon: Settings },
 ];
 
 interface CommandPaletteProps {

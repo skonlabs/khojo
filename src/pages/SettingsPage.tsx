@@ -247,29 +247,64 @@ client.track(
       </div>
 
       {/* Danger zone */}
-      <div className="rounded-lg border border-critical/30 bg-critical/5 p-4 space-y-3">
+      <div className="rounded-lg border border-critical/30 bg-critical/5 p-4 space-y-4">
         <h3 className="text-sm font-medium text-critical">Danger zone</h3>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="h-4 w-4" /> Delete all runs
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete all runs?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all run data for "{activeProject.name}". This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteAllRuns} disabled={deleting} className="bg-destructive text-destructive-foreground">
-                {deleting ? "Deleting..." : "Delete all"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
+        <div className="flex items-center justify-between rounded-md border border-border p-3">
+          <div>
+            <p className="text-sm text-foreground font-medium">Delete all runs</p>
+            <p className="text-xs text-muted-foreground">Permanently delete all run data for this project</p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4" /> Delete all runs
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all runs?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all run data for "{activeProject.name}". This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteAllRuns} disabled={deleting} className="bg-destructive text-destructive-foreground">
+                  {deleting ? "Deleting..." : "Delete all"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border border-destructive/30 p-3">
+          <div>
+            <p className="text-sm text-foreground font-medium">Delete project</p>
+            <p className="text-xs text-muted-foreground">Permanently delete "{activeProject.name}" and all its data</p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <AlertCircle className="h-4 w-4" /> Delete project
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete project "{activeProject.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the project, its API key, and all associated run data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteProject} disabled={deletingProject} className="bg-destructive text-destructive-foreground">
+                  {deletingProject ? "Deleting..." : "Delete project"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </div>
   );

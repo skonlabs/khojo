@@ -608,12 +608,10 @@ function BlockRenderer({ block }: { block: Block }) {
     case "subheading":
       return <h3 className="text-foreground mt-3 mb-1">{block.content}</h3>;
 
-    case "image":
+    case "mockup":
       return (
         <div className="my-3">
-          <div className="rounded-lg border border-border overflow-hidden">
-            <img src={block.src} alt={block.alt} loading="lazy" className="w-full" />
-          </div>
+          <MockupDiagram variant={block.variant} />
           {block.caption && (
             <p className="text-[11px] text-muted-foreground mt-1.5 italic">{block.caption}</p>
           )}

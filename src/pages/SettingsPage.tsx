@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CodeBlock } from "@/components/CodeBlock";
 import { toast } from "sonner";
-import { Copy, Check, Key, Eye, EyeOff, Trash2, Radio, WifiOff } from "lucide-react";
+import { Copy, Check, Key, Eye, EyeOff, Trash2, Radio, WifiOff, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,13 +16,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { activeProject, refreshProjects, user } = useAuth();
+  const { activeProject, refreshProjects, user, setActiveProjectId } = useAuth();
   const [projectName, setProjectName] = useState(activeProject?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
   const [sdkTab, setSdkTab] = useState<"javascript" | "python" | "curl">("javascript");
   const [deleting, setDeleting] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+  const navigate = useNavigate();
   const [regenerating, setRegenerating] = useState(false);
 
   const apiKey = activeProject?.api_key ?? "";
@@ -88,6 +91,23 @@ export default function SettingsPage() {
     setDeleting(false);
     if (error) toast.error("Failed to delete runs");
     else toast.success("All runs deleted for this project");
+  };
+
+  const deleteProject = async () => {
+    if (!activeProject) return;
+    setDeletingProject(true);
+    // Delete all runs first
+    await supabase.from("runs").delete().eq("project_id", activeProject.id);
+    // Delete the project
+    const { error } = await supabase.from("projects").delete().eq("id", activeProject.id);
+    setDeletingProject(false);
+    if (error) {
+      toast.error("Failed to delete project");
+    } else {
+      toast.success(`Project "${activeProject.name}" deleted`);
+      await refreshProjects();
+      navigate("/");
+    }
   };
 
   const maskedKey = `${"•".repeat(Math.max(0, apiKey.length - 8))}${apiKey.slice(-8)}`;
@@ -227,29 +247,64 @@ client.track(
       </div>
 
       {/* Danger zone */}
-      <div className="rounded-lg border border-critical/30 bg-critical/5 p-4 space-y-3">
+      <div className="rounded-lg border border-critical/30 bg-critical/5 p-4 space-y-4">
         <h3 className="text-sm font-medium text-critical">Danger zone</h3>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="h-4 w-4" /> Delete all runs
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete all runs?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all run data for "{activeProject.name}". This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={deleteAllRuns} disabled={deleting} className="bg-destructive text-destructive-foreground">
-                {deleting ? "Deleting..." : "Delete all"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
+        <div className="flex items-center justify-between rounded-md border border-border p-3">
+          <div>
+            <p className="text-sm text-foreground font-medium">Delete all runs</p>
+            <p className="text-xs text-muted-foreground">Permanently delete all run data for this project</p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4" /> Delete all runs
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all runs?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all run data for "{activeProject.name}". This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteAllRuns} disabled={deleting} className="bg-destructive text-destructive-foreground">
+                  {deleting ? "Deleting..." : "Delete all"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border border-destructive/30 p-3">
+          <div>
+            <p className="text-sm text-foreground font-medium">Delete project</p>
+            <p className="text-xs text-muted-foreground">Permanently delete "{activeProject.name}" and all its data</p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <AlertCircle className="h-4 w-4" /> Delete project
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete project "{activeProject.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the project, its API key, and all associated run data. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteProject} disabled={deletingProject} className="bg-destructive text-destructive-foreground">
+                  {deletingProject ? "Deleting..." : "Delete project"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </div>
   );

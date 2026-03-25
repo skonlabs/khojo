@@ -136,7 +136,7 @@ await client.track({
         blocks: [
           { type: "heading", content: "When to use the Overview" },
           { type: "text", content: "Open the Overview when you want a quick health check of your AI system. It answers: \"How are things going overall? Are issues getting better or worse?\"" },
-          { type: "image", src: overviewImg, alt: "Overview dashboard with metrics and charts", caption: "The Overview shows total runs, failure rate, token usage, and trend charts at a glance" },
+          { type: "mockup", variant: "overview", caption: "The Overview shows total runs, failure rate, token usage, and trend charts at a glance" },
           { type: "heading", content: "Key metrics explained" },
           { type: "table", headers: ["Metric", "What It Means", "Good Target"], rows: [
             ["Total Runs", "Number of AI calls captured", "Depends on your volume"],

@@ -3,6 +3,7 @@ import { FailureBadge } from "@/components/FailureBadge";
 import { CodeBlock } from "@/components/CodeBlock";
 import { HighlightedOutput } from "@/components/HighlightedOutput";
 import { Zap, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OutputHighlight {
   text: string;
@@ -19,7 +20,9 @@ interface AnalysisResult {
   highlights: OutputHighlight[];
 }
 
-const analyze = (input: string, output: string, context: string): AnalysisResult => {
+const MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "claude-3.5-sonnet", "claude-3-haiku", "gemini-pro"];
+
+const analyze = (input: string, output: string, context: string, prompt: string, model: string): AnalysisResult => {
   const results: AnalysisResult = {
     failureTypes: [],
     whatFailed: "",
@@ -39,9 +42,13 @@ const analyze = (input: string, output: string, context: string): AnalysisResult
       results.failureTypes.push("hallucination");
       results.whatFailed = `Output contains ${mismatchedNums.length} value(s) not found in context: ${mismatchedNums.slice(0, 3).join(", ")}`;
       results.whyFailed = `Detected factual discrepancies between context and output. Values ${mismatchedNums.slice(0, 3).join(", ")} appear in the output but are not present in the provided context.`;
-      results.rootCause = "Model relied on parametric knowledge instead of provided context.";
-      results.fix = `- prompt: "Answer the question."
-+ prompt: "Answer ONLY using the provided context. Do not add information not present in the context."`;
+      results.rootCause = prompt
+        ? `System prompt "${prompt.slice(0, 60)}..." does not enforce context grounding. Model (${model}) relied on parametric knowledge.`
+        : `Model (${model}) relied on parametric knowledge instead of provided context. No system prompt to enforce grounding.`;
+      results.fix = prompt
+        ? `- prompt: "${prompt.slice(0, 60)}..."
++ prompt: "${prompt.slice(0, 40)}... Answer ONLY using the provided context. Do not add information not present in the context."`
+        : `+ prompt: "Answer ONLY using the provided context. Do not add information not present in the context."`;
       results.highlights = mismatchedNums.slice(0, 5).map(n => ({
         text: n,
         type: "wrong" as const,
@@ -59,7 +66,7 @@ const analyze = (input: string, output: string, context: string): AnalysisResult
     const ratio = Math.round(outputWords / inputWords);
     results.whatFailed = `Output is ${ratio}x longer than input (${outputWords} words for ${inputWords}-word query)`;
     results.whyFailed = `Response uses ${outputWords} words for a ${inputWords}-word question. Excessive elaboration detected.`;
-    results.rootCause = "No max_tokens constraint or conciseness instruction in system prompt.";
+    results.rootCause = `No max_tokens constraint or conciseness instruction. Model: ${model}.`;
     results.fix = `+ max_tokens: 200
 + system: "Be concise. Answer in under 100 words unless asked for detail."`;
 
@@ -93,8 +100,13 @@ const analyze = (input: string, output: string, context: string): AnalysisResult
         results.failureTypes.push("incomplete");
         results.whatFailed = `Output only addresses part of the multi-part question. Missing: "${secondPart}"`;
         results.whyFailed = `The input asks for multiple things but the output primarily covers only the first part.`;
-        results.rootCause = "Model did not plan to address all parts of the query.";
-        results.fix = `+ prompt: "Ensure you address ALL parts of the user's question."`;
+        results.rootCause = prompt
+          ? `Prompt "${prompt.slice(0, 50)}..." does not instruct ${model} to address all parts.`
+          : `Model (${model}) did not plan to address all parts. No prompt enforcing completeness.`;
+        results.fix = prompt
+          ? `- prompt: "${prompt.slice(0, 50)}..."
++ prompt: "${prompt.slice(0, 40)}... Ensure you address ALL parts of the user's question."`
+          : `+ prompt: "Ensure you address ALL parts of the user's question. If they ask for X and Y, include both."`;
         results.highlights = [{ text: secondPart, type: "missing" as const, note: "This part was not addressed" }];
         return results;
       }
@@ -106,13 +118,13 @@ const analyze = (input: string, output: string, context: string): AnalysisResult
     results.failureTypes.push("hallucination");
     results.whatFailed = "Potential unsupported claims — output may contain information not grounded in context";
     results.whyFailed = "Output may contain information not present in the provided context.";
-    results.rootCause = "Context grounding may be insufficient in prompt template.";
+    results.rootCause = `Context grounding may be insufficient${prompt ? ` in prompt: "${prompt.slice(0, 50)}..."` : ""}. Model: ${model}.`;
     results.fix = `+ prompt: "Answer ONLY using the provided context. If unsure, say 'I don't have enough information.'"`;
   } else {
     results.failureTypes.push("inconsistent");
     results.whatFailed = "Cannot fully verify without context — potential consistency risk";
     results.whyFailed = "No context provided to validate against.";
-    results.rootCause = "Missing context/ground truth for validation.";
+    results.rootCause = `Missing context/ground truth for validation. Model: ${model}.`;
     results.fix = `+ // Add context to your trackAI call:
 + trackAI({ input, output, context: retrievedDocs })`;
   }
@@ -124,6 +136,8 @@ export default function AnalyzerPage() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [context, setContext] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("gpt-4o");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -131,7 +145,7 @@ export default function AnalyzerPage() {
     setLoading(true);
     setResult(null);
     setTimeout(() => {
-      const analysis = analyze(input, output, context);
+      const analysis = analyze(input, output, context, prompt, model);
       setResult(analysis);
       setLoading(false);
     }, 600);
@@ -141,6 +155,8 @@ export default function AnalyzerPage() {
     setInput("What is the refund policy for premium subscribers?");
     setOutput("Premium subscribers can request a full refund within 30 days of purchase. Simply contact our support team and they will process your refund within 3-5 business days.");
     setContext("Refund Policy: All subscribers, including premium, are eligible for a full refund within 14 days of purchase. Refunds are processed within 7-10 business days.");
+    setPrompt("Answer the user's question comprehensively.");
+    setModel("gpt-4o");
     setResult(null);
   };
 
@@ -149,9 +165,9 @@ export default function AnalyzerPage() {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <Zap className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold text-foreground">Instant Analyzer</h1>
+          <h1 className="text-foreground">Instant Analyzer</h1>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           Paste an AI input/output pair — no SDK required. Get immediate failure detection.{" "}
           <button onClick={loadExample} className="text-primary hover:underline">Load example →</button>
         </p>
@@ -161,11 +177,26 @@ export default function AnalyzerPage() {
         <Field label="Input (user query)" value={input} onChange={setInput} placeholder="What is the refund policy?" />
         <Field label="Output (AI response)" value={output} onChange={setOutput} placeholder="Our refund policy allows returns within 30 days..." rows={5} />
         <Field label="Context (optional — retrieved docs, ground truth)" value={context} onChange={setContext} placeholder="Refund Policy: Full refund within 14 days of purchase..." rows={3} />
+        <Field label="System prompt (optional)" value={prompt} onChange={setPrompt} placeholder="Answer the user's question comprehensively." rows={2} />
+
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1.5">Model</label>
+          <Select value={model} onValueChange={setModel}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODELS.map(m => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <button
           onClick={handleAnalyze}
           disabled={!input.trim() || !output.trim() || loading}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
           Analyze
@@ -175,10 +206,11 @@ export default function AnalyzerPage() {
       {result && (
         <div className="rounded-lg border border-border bg-card p-5 space-y-4 animate-fade-in">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-medium text-foreground">Analysis Result</h3>
+            <h3 className="text-foreground">Analysis Result</h3>
             <div className="flex gap-1">
               {result.failureTypes.map(ft => <FailureBadge key={ft} type={ft} />)}
             </div>
+            <span className="text-xs text-muted-foreground ml-auto">Model: {model}</span>
           </div>
 
           <DiagnosisItem emoji="❌" label="What Failed" value={result.whatFailed} />
@@ -187,15 +219,15 @@ export default function AnalyzerPage() {
 
           {result.highlights.length > 0 && (
             <div>
-              <span className="text-xs font-medium text-muted-foreground block mb-1.5">📍 Output with highlights</span>
-              <div className="rounded-md p-3 border border-critical/30 bg-critical/5 text-sm font-mono text-foreground">
+              <span className="text-xs text-muted-foreground block mb-1.5">📍 Output with highlights</span>
+              <div className="rounded-md p-3 border border-critical/30 bg-critical/5">
                 <HighlightedOutput text={output} highlights={result.highlights} />
               </div>
             </div>
           )}
 
           <div>
-            <span className="text-xs font-medium text-muted-foreground block mb-1.5">✅ Suggested Fix</span>
+            <span className="text-xs text-muted-foreground block mb-1.5">✅ Suggested Fix</span>
             <CodeBlock code={result.fix} />
           </div>
         </div>
@@ -207,13 +239,13 @@ export default function AnalyzerPage() {
 function Field({ label, value, onChange, placeholder, rows = 2 }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; rows?: number }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}</label>
+      <label className="text-xs text-muted-foreground block mb-1.5">{label}</label>
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full bg-surface-1 border border-border rounded-md p-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+        className="w-full bg-surface-1 border border-border rounded-md p-3 text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
       />
     </div>
   );
@@ -222,8 +254,8 @@ function Field({ label, value, onChange, placeholder, rows = 2 }: { label: strin
 function DiagnosisItem({ emoji, label, value }: { emoji: string; label: string; value: string }) {
   return (
     <div>
-      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">{emoji} {label}</span>
-      <p className="text-sm text-foreground bg-surface-1 rounded-md p-2.5 border border-border">{value}</p>
+      <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">{emoji} {label}</span>
+      <p className="text-foreground bg-surface-1 rounded-md p-2.5 border border-border">{value}</p>
     </div>
   );
 }

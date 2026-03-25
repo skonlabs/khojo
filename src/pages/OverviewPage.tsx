@@ -140,19 +140,17 @@ export default function OverviewPage() {
         </div>
         <div className="flex items-center gap-3">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => navigate("/analyzer")}
-            className="text-xs"
+            className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Zap className="h-3.5 w-3.5 mr-1" /> Instant Analyzer
           </Button>
           {activeProject && (
             <Button
-              variant={activeProject.monitoring_enabled ? "outline" : "default"}
               size="sm"
               onClick={toggleMonitoring}
-              className="text-xs"
+              className={`text-xs ${activeProject.monitoring_enabled ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-success text-success-foreground hover:bg-success/90"}`}
             >
               {activeProject.monitoring_enabled ? (
                 <><WifiOff className="h-3.5 w-3.5 mr-1" /> Pause monitoring</>

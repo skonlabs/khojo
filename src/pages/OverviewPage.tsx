@@ -186,7 +186,7 @@ export default function OverviewPage() {
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <span className="text-xs text-muted-foreground">Pending eval</span>
-          <div className={`text-lg font-semibold mt-1 ${stats!.pending > 0 ? "text-warning" : "text-success"}`}>{stats!.pending}</div>
+          <div className={`text-base font-semibold mt-1 ${stats!.pending > 0 ? "text-warning" : "text-success"}`}>{stats!.pending}</div>
         </div>
       </div>
 

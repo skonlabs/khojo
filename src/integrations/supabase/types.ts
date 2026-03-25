@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedback: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           api_key: string
@@ -35,6 +59,33 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          monitoring_enabled: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          monitoring_enabled?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          monitoring_enabled?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       runs: {
         Row: {
           confidence: string | null
@@ -52,6 +103,7 @@ export type Database = {
           output: string
           output_tokens: number
           primary_failure: string | null
+          project_id: string | null
           prompt: string | null
           proof: Json | null
           root_cause: string | null
@@ -76,6 +128,7 @@ export type Database = {
           output: string
           output_tokens?: number
           primary_failure?: string | null
+          project_id?: string | null
           prompt?: string | null
           proof?: Json | null
           root_cause?: string | null
@@ -100,6 +153,7 @@ export type Database = {
           output?: string
           output_tokens?: number
           primary_failure?: string | null
+          project_id?: string | null
           prompt?: string | null
           proof?: Json | null
           root_cause?: string | null
@@ -109,6 +163,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "runs_user_id_fkey"
             columns: ["user_id"]

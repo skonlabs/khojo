@@ -3,10 +3,15 @@ import { FailureBadge } from "@/components/FailureBadge";
 import { CodeBlock } from "@/components/CodeBlock";
 import { HighlightedOutput } from "@/components/HighlightedOutput";
 import { Zap, Loader2 } from "lucide-react";
-import type { FailureType, OutputHighlight } from "@/data/sampleData";
+
+interface OutputHighlight {
+  text: string;
+  type: "wrong" | "repeated" | "missing";
+  note: string;
+}
 
 interface AnalysisResult {
-  failureTypes: FailureType[];
+  failureTypes: string[];
   whatFailed: string;
   whyFailed: string;
   rootCause: string;
@@ -14,33 +19,32 @@ interface AnalysisResult {
   highlights: OutputHighlight[];
 }
 
-const mockAnalyze = (input: string, output: string, context: string): AnalysisResult => {
-  // More sophisticated mock analysis
+const analyze = (input: string, output: string, context: string): AnalysisResult => {
   const results: AnalysisResult = {
     failureTypes: [],
-    whatFailed: '',
-    whyFailed: '',
-    rootCause: '',
-    fix: '',
+    whatFailed: "",
+    whyFailed: "",
+    rootCause: "",
+    fix: "",
     highlights: [],
   };
 
-  // Check for hallucination by comparing context vs output
+  // Check for hallucination
   if (context) {
     const contextNumbers: string[] = context.match(/\d+/g) || [];
     const outputNumbers: string[] = output.match(/\d+/g) || [];
     const mismatchedNums = outputNumbers.filter(n => !contextNumbers.includes(n) && parseInt(n) > 1);
 
     if (mismatchedNums.length > 0) {
-      results.failureTypes.push('hallucination');
-      results.whatFailed = `Output contains ${mismatchedNums.length} value(s) not found in context: ${mismatchedNums.slice(0, 3).join(', ')}`;
-      results.whyFailed = `Detected factual discrepancies between context and output. Values ${mismatchedNums.slice(0, 3).join(', ')} appear in the output but are not present in the provided context.`;
-      results.rootCause = 'Model relied on parametric knowledge instead of provided context. Context may not be positioned optimally in the prompt.';
+      results.failureTypes.push("hallucination");
+      results.whatFailed = `Output contains ${mismatchedNums.length} value(s) not found in context: ${mismatchedNums.slice(0, 3).join(", ")}`;
+      results.whyFailed = `Detected factual discrepancies between context and output. Values ${mismatchedNums.slice(0, 3).join(", ")} appear in the output but are not present in the provided context.`;
+      results.rootCause = "Model relied on parametric knowledge instead of provided context.";
       results.fix = `- prompt: "Answer the question."
-+ prompt: "Answer ONLY using the provided context. Do not add information not present in the context. Quote numbers exactly."`;
++ prompt: "Answer ONLY using the provided context. Do not add information not present in the context."`;
       results.highlights = mismatchedNums.slice(0, 5).map(n => ({
         text: n,
-        type: 'wrong' as const,
+        type: "wrong" as const,
         note: `Value "${n}" not found in context`,
       }));
       return results;
@@ -51,34 +55,33 @@ const mockAnalyze = (input: string, output: string, context: string): AnalysisRe
   const outputWords = output.split(/\s+/).length;
   const inputWords = input.split(/\s+/).length;
   if (outputWords > inputWords * 5 && outputWords > 50) {
-    results.failureTypes.push('verbose');
+    results.failureTypes.push("verbose");
     const ratio = Math.round(outputWords / inputWords);
-    results.whatFailed = `Output is ${ratio}x longer than input (${outputWords} words for ${inputWords}-word query) — likely over-generated`;
+    results.whatFailed = `Output is ${ratio}x longer than input (${outputWords} words for ${inputWords}-word query)`;
     results.whyFailed = `Response uses ${outputWords} words for a ${inputWords}-word question. Excessive elaboration detected.`;
-    results.rootCause = 'No max_tokens constraint or conciseness instruction in system prompt.';
+    results.rootCause = "No max_tokens constraint or conciseness instruction in system prompt.";
     results.fix = `+ max_tokens: 200
 + system: "Be concise. Answer in under 100 words unless asked for detail."`;
 
-    // Find repeated phrases
     const sentences = output.split(/[.!?]+/).filter(s => s.trim().length > 10);
     const seen = new Map<string, number>();
     sentences.forEach(s => {
-      const words = s.trim().split(/\s+/).slice(0, 4).join(' ').toLowerCase();
+      const words = s.trim().split(/\s+/).slice(0, 4).join(" ").toLowerCase();
       seen.set(words, (seen.get(words) || 0) + 1);
     });
     results.highlights = sentences
       .filter(s => {
-        const key = s.trim().split(/\s+/).slice(0, 4).join(' ').toLowerCase();
+        const key = s.trim().split(/\s+/).slice(0, 4).join(" ").toLowerCase();
         return (seen.get(key) || 0) > 1;
       })
       .slice(0, 3)
-      .map(s => ({ text: s.trim(), type: 'repeated' as const, note: 'Repetitive content' }));
+      .map(s => ({ text: s.trim(), type: "repeated" as const, note: "Repetitive content" }));
 
     return results;
   }
 
-  // Check for incomplete (multi-part question)
-  if (input.toLowerCase().includes(' and ')) {
+  // Check for incomplete
+  if (input.toLowerCase().includes(" and ")) {
     const parts = input.split(/ and /i);
     if (parts.length >= 2) {
       const secondPart = parts[1].split(/[?.!]/)[0].trim();
@@ -87,42 +90,40 @@ const mockAnalyze = (input: string, output: string, context: string): AnalysisRe
       const missingKeywords = secondKeywords.filter(k => !outputLower.includes(k.toLowerCase()));
 
       if (missingKeywords.length > secondKeywords.length * 0.5) {
-        results.failureTypes.push('incomplete');
-        results.whatFailed = `Output only addresses part of the multi-part question. Missing coverage of: "${secondPart}"`;
-        results.whyFailed = `The input asks for multiple things but the output primarily covers only the first part. Key terms from the second part are missing: ${missingKeywords.join(', ')}`;
-        results.rootCause = 'Model did not plan to address all parts of the query. No instruction to ensure completeness.';
-        results.fix = `+ prompt: "Ensure you address ALL parts of the user's question. If they ask for X and Y, include both X and Y."`;
-        results.highlights = [{ text: secondPart, type: 'missing' as const, note: 'This part of the question was not addressed' }];
+        results.failureTypes.push("incomplete");
+        results.whatFailed = `Output only addresses part of the multi-part question. Missing: "${secondPart}"`;
+        results.whyFailed = `The input asks for multiple things but the output primarily covers only the first part.`;
+        results.rootCause = "Model did not plan to address all parts of the query.";
+        results.fix = `+ prompt: "Ensure you address ALL parts of the user's question."`;
+        results.highlights = [{ text: secondPart, type: "missing" as const, note: "This part was not addressed" }];
         return results;
       }
     }
   }
 
-  // Default analysis
+  // Default
   if (context) {
-    results.failureTypes.push('hallucination');
-    results.whatFailed = 'Potential unsupported claims detected — output may contain information not grounded in context';
-    results.whyFailed = 'Output may contain information not present in the provided context. Manual verification recommended for factual accuracy.';
-    results.rootCause = 'Context grounding may be insufficient in prompt template. Model may be supplementing with parametric knowledge.';
+    results.failureTypes.push("hallucination");
+    results.whatFailed = "Potential unsupported claims — output may contain information not grounded in context";
+    results.whyFailed = "Output may contain information not present in the provided context.";
+    results.rootCause = "Context grounding may be insufficient in prompt template.";
     results.fix = `+ prompt: "Answer ONLY using the provided context. If unsure, say 'I don't have enough information.'"`;
-    results.highlights = [];
   } else {
-    results.failureTypes.push('inconsistent');
-    results.whatFailed = 'Cannot fully verify output without context — potential consistency risk across runs';
-    results.whyFailed = 'No context provided to validate against. Output may vary across repeated runs with the same input.';
-    results.rootCause = 'Missing context/ground truth for validation. Consider adding retrieved docs or expected output.';
+    results.failureTypes.push("inconsistent");
+    results.whatFailed = "Cannot fully verify without context — potential consistency risk";
+    results.whyFailed = "No context provided to validate against.";
+    results.rootCause = "Missing context/ground truth for validation.";
     results.fix = `+ // Add context to your trackAI call:
 + trackAI({ input, output, context: retrievedDocs })`;
-    results.highlights = [];
   }
 
   return results;
 };
 
 export default function AnalyzerPage() {
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
-  const [context, setContext] = useState('');
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
+  const [context, setContext] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -130,16 +131,16 @@ export default function AnalyzerPage() {
     setLoading(true);
     setResult(null);
     setTimeout(() => {
-      const analysis = mockAnalyze(input, output, context);
+      const analysis = analyze(input, output, context);
       setResult(analysis);
       setLoading(false);
-    }, 800);
+    }, 600);
   };
 
   const loadExample = () => {
-    setInput('What is the refund policy for premium subscribers?');
-    setOutput('Premium subscribers can request a full refund within 30 days of purchase. Simply contact our support team and they will process your refund within 3-5 business days.');
-    setContext('Refund Policy: All subscribers, including premium, are eligible for a full refund within 14 days of purchase. Refunds are processed within 7-10 business days.');
+    setInput("What is the refund policy for premium subscribers?");
+    setOutput("Premium subscribers can request a full refund within 30 days of purchase. Simply contact our support team and they will process your refund within 3-5 business days.");
+    setContext("Refund Policy: All subscribers, including premium, are eligible for a full refund within 14 days of purchase. Refunds are processed within 7-10 business days.");
     setResult(null);
   };
 
@@ -151,7 +152,7 @@ export default function AnalyzerPage() {
           <h1 className="text-xl font-semibold text-foreground">Instant Analyzer</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Paste an AI input/output pair — no SDK required.{' '}
+          Paste an AI input/output pair — no SDK required. Get immediate failure detection.{" "}
           <button onClick={loadExample} className="text-primary hover:underline">Load example →</button>
         </p>
       </div>
@@ -184,7 +185,6 @@ export default function AnalyzerPage() {
           <DiagnosisItem emoji="🔍" label="Proof" value={result.whyFailed} />
           <DiagnosisItem emoji="⚠️" label="Root Cause" value={result.rootCause} />
 
-          {/* Highlighted output */}
           {result.highlights.length > 0 && (
             <div>
               <span className="text-xs font-medium text-muted-foreground block mb-1.5">📍 Output with highlights</span>

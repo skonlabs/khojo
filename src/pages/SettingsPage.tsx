@@ -3,10 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CodeBlock } from "@/components/CodeBlock";
 import { toast } from "sonner";
-import { Copy, Check, Key, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Copy, Check, Key, Eye, EyeOff, Trash2, Radio, WifiOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -14,8 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SettingsPage() {
-  const { profile, refreshProfile, user } = useAuth();
-  const [projectName, setProjectName] = useState(profile?.project_name ?? "");
+  const { activeProject, refreshProjects, user } = useAuth();
+  const [projectName, setProjectName] = useState(activeProject?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
@@ -23,19 +24,20 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
-  const apiKey = profile?.api_key ?? "";
+  const apiKey = activeProject?.api_key ?? "";
 
   const saveProject = async () => {
+    if (!activeProject) return;
     setSaving(true);
     const { error } = await supabase
-      .from("profiles")
-      .update({ project_name: projectName.trim() })
-      .eq("id", profile?.id);
+      .from("projects")
+      .update({ name: projectName.trim() } as any)
+      .eq("id", activeProject.id);
     setSaving(false);
     if (error) toast.error("Failed to save");
     else {
       toast.success("Project name saved");
-      refreshProfile();
+      refreshProjects();
     }
   };
 
@@ -47,30 +49,45 @@ export default function SettingsPage() {
   };
 
   const regenerateKey = async () => {
+    if (!activeProject) return;
     setRegenerating(true);
     const newKey = crypto.randomUUID();
     const { error } = await supabase
-      .from("profiles")
-      .update({ api_key: newKey })
-      .eq("id", profile?.id);
+      .from("projects")
+      .update({ api_key: newKey } as any)
+      .eq("id", activeProject.id);
     setRegenerating(false);
     if (error) toast.error("Failed to regenerate key");
     else {
       toast.success("API key regenerated");
-      refreshProfile();
+      refreshProjects();
       setKeyRevealed(true);
     }
   };
 
+  const toggleMonitoring = async () => {
+    if (!activeProject) return;
+    const { error } = await supabase
+      .from("projects")
+      .update({ monitoring_enabled: !activeProject.monitoring_enabled } as any)
+      .eq("id", activeProject.id);
+    if (error) toast.error("Failed to update");
+    else {
+      toast.success(activeProject.monitoring_enabled ? "Monitoring paused" : "Monitoring enabled");
+      refreshProjects();
+    }
+  };
+
   const deleteAllRuns = async () => {
+    if (!activeProject) return;
     setDeleting(true);
     const { error } = await supabase
       .from("runs")
       .delete()
-      .eq("user_id", user?.id);
+      .eq("project_id", activeProject.id);
     setDeleting(false);
     if (error) toast.error("Failed to delete runs");
-    else toast.success("All runs deleted");
+    else toast.success("All runs deleted for this project");
   };
 
   const maskedKey = `${"•".repeat(Math.max(0, apiKey.length - 8))}${apiKey.slice(-8)}`;
@@ -111,19 +128,41 @@ client.track(
     "model": "gpt-4o"
   }'`;
 
+  if (!activeProject) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <p className="text-muted-foreground">No project selected. Create one from the sidebar.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto animate-fade-in space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">Project configuration and SDK setup</p>
+        <p className="text-sm text-muted-foreground mt-1">Configuration for "{activeProject.name}"</p>
       </div>
 
-      {/* Project */}
+      {/* Project name */}
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <h3 className="text-sm font-medium text-foreground">Project</h3>
+        <h3 className="text-sm font-medium text-foreground">Project name</h3>
         <div className="flex items-center gap-2">
           <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="My AI App" className="flex-1" />
           <Button onClick={saveProject} disabled={saving} size="sm">{saving ? "Saving..." : "Save"}</Button>
+        </div>
+      </div>
+
+      {/* Monitoring toggle */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {activeProject.monitoring_enabled ? <Radio className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
+            <div>
+              <h3 className="text-sm font-medium text-foreground">Real-time monitoring</h3>
+              <p className="text-xs text-muted-foreground">When off, the API will reject incoming runs for this project</p>
+            </div>
+          </div>
+          <Switch checked={activeProject.monitoring_enabled} onCheckedChange={toggleMonitoring} />
         </div>
       </div>
 
@@ -152,7 +191,7 @@ client.track(
             <AlertDialogHeader>
               <AlertDialogTitle>Regenerate API key?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will invalidate your current key. Any apps using the old key will stop sending data. Continue?
+                This will invalidate your current key. Any apps using the old key will stop sending data.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -200,7 +239,7 @@ client.track(
             <AlertDialogHeader>
               <AlertDialogTitle>Delete all runs?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete all your run data. This action cannot be undone.
+                This will permanently delete all run data for "{activeProject.name}". This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

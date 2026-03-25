@@ -7,40 +7,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CodeBlock } from "@/components/CodeBlock";
 import { toast } from "sonner";
-import { Check, Copy, AlertTriangle, Search } from "lucide-react";
+import { Check, Copy, AlertTriangle, Search, Zap } from "lucide-react";
 
 export default function OnboardingPage() {
-  const { profile, refreshProfile } = useAuth();
+  const { user, refreshProjects } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [projectName, setProjectName] = useState("");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [sdkTab, setSdkTab] = useState<"javascript" | "python">("javascript");
-
-  const apiKey = profile?.api_key ?? "";
+  const [createdApiKey, setCreatedApiKey] = useState("");
 
   const handleSaveProject = async () => {
     if (!projectName.trim()) {
       toast.error("Please enter a project name");
       return;
     }
+    if (!user) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ project_name: projectName.trim() })
-      .eq("id", profile?.id);
+    // Create a new project
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({ user_id: user.id, name: projectName.trim() } as any)
+      .select("api_key")
+      .single();
     setSaving(false);
     if (error) {
-      toast.error("Failed to save project name");
+      toast.error("Failed to create project");
     } else {
-      await refreshProfile();
+      setCreatedApiKey((data as any).api_key);
+      await refreshProjects();
       setStep(2);
     }
   };
 
   const copyKey = () => {
-    navigator.clipboard.writeText(apiKey);
+    navigator.clipboard.writeText(createdApiKey);
     setKeyCopied(true);
     toast.success("API key copied");
     setTimeout(() => setKeyCopied(false), 2000);
@@ -48,7 +51,7 @@ export default function OnboardingPage() {
 
   const jsSnippet = `import { trackAI } from '@khojo/sdk'
 
-const client = trackAI({ apiKey: '${apiKey}' })
+const client = trackAI({ apiKey: '${createdApiKey || "YOUR_API_KEY"}' })
 
 await client.track({
   input: userMessage,
@@ -61,7 +64,7 @@ await client.track({
 
   const pySnippet = `from khojo import track_ai
 
-client = track_ai(api_key="${apiKey}")
+client = track_ai(api_key="${createdApiKey || "YOUR_API_KEY"}")
 
 client.track(
   input=user_message,
@@ -112,7 +115,7 @@ client.track(
               />
             </div>
             <Button onClick={handleSaveProject} disabled={saving} className="w-full">
-              {saving ? "Saving..." : "Continue"}
+              {saving ? "Creating..." : "Continue"}
             </Button>
           </div>
         )}
@@ -124,7 +127,7 @@ client.track(
               <p className="text-sm text-muted-foreground mt-1">Use this to authenticate SDK calls</p>
             </div>
             <div className="flex items-center gap-2">
-              <Input readOnly value={apiKey} className="font-mono text-xs" />
+              <Input readOnly value={createdApiKey} className="font-mono text-xs" />
               <Button variant="outline" size="icon" onClick={copyKey}>
                 {keyCopied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
               </Button>
@@ -140,27 +143,48 @@ client.track(
         {step === 3 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Install the SDK</h2>
-              <p className="text-sm text-muted-foreground mt-1">Add one line to start monitoring</p>
+              <h2 className="text-lg font-semibold text-foreground">Get started</h2>
+              <p className="text-sm text-muted-foreground mt-1">Choose how you want to debug your AI outputs</p>
             </div>
-            <div className="flex gap-1">
-              {(["javascript", "python"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setSdkTab(t)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    sdkTab === t
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-surface-1 text-muted-foreground hover:text-foreground border border-border"
-                  }`}
-                >
-                  {t === "javascript" ? "JavaScript" : "Python"}
-                </button>
-              ))}
+
+            {/* Quick start - Instant Analyzer */}
+            <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Quick start — No SDK needed</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">Paste any AI input/output pair and instantly see what's broken, why, and how to fix it.</p>
+              <Button onClick={() => navigate("/analyzer")} variant="default" className="w-full">
+                <Zap className="h-4 w-4 mr-1" /> Try Instant Analyzer
+              </Button>
             </div>
-            <CodeBlock code={sdkTab === "javascript" ? jsSnippet : pySnippet} />
-            <Button onClick={() => navigate("/")} className="w-full">
-              Done — open my dashboard
+
+            {/* SDK setup - optional */}
+            <div className="rounded-lg border border-border bg-surface-1 p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-medium text-foreground">Optional — SDK for real-time monitoring</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Add one line to your app to automatically capture and analyze every AI call.</p>
+              </div>
+              <div className="flex gap-1">
+                {(["javascript", "python"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setSdkTab(t)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      sdkTab === t
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-surface-2 text-muted-foreground hover:text-foreground border border-border"
+                    }`}
+                  >
+                    {t === "javascript" ? "JavaScript" : "Python"}
+                  </button>
+                ))}
+              </div>
+              <CodeBlock code={sdkTab === "javascript" ? jsSnippet : pySnippet} />
+            </div>
+
+            <Button variant="outline" onClick={() => navigate("/")} className="w-full">
+              Open my dashboard →
             </Button>
           </div>
         )}

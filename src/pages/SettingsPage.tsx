@@ -15,13 +15,65 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type Platform = "windows" | "macos-intel" | "macos-apple" | "linux";
+type SdkTab = "javascript" | "python" | "curl";
+
+const PLATFORM_LABELS: Record<Platform, string> = {
+  "windows": "Windows",
+  "macos-intel": "macOS Intel",
+  "macos-apple": "macOS Apple Silicon",
+  "linux": "Linux",
+};
+
+function getInstallCommand(platform: Platform, tab: SdkTab): string {
+  if (tab === "curl") return ""; // cURL needs no install
+  if (tab === "javascript") {
+    switch (platform) {
+      case "windows":
+        return "npm install @khojo/sdk\n# or with yarn:\nyarn add @khojo/sdk";
+      case "macos-intel":
+      case "macos-apple":
+        return "npm install @khojo/sdk\n# or with yarn:\nyarn add @khojo/sdk";
+      case "linux":
+        return "npm install @khojo/sdk\n# or with yarn:\nyarn add @khojo/sdk";
+    }
+  }
+  // Python
+  switch (platform) {
+    case "windows":
+      return "pip install khojo\n# if pip is not on PATH:\npy -m pip install khojo\n# recommended: use a virtual environment\npython -m venv .venv && .venv\\Scripts\\activate\npip install khojo";
+    case "macos-intel":
+      return "pip3 install khojo\n# recommended: use a virtual environment\npython3 -m venv .venv && source .venv/bin/activate\npip install khojo";
+    case "macos-apple":
+      return "pip3 install khojo\n# recommended: use a virtual environment\npython3 -m venv .venv && source .venv/bin/activate\npip install khojo\n# Note: native arm64 wheels are used automatically on Apple Silicon";
+    case "linux":
+      return "pip3 install khojo\n# recommended: use a virtual environment\npython3 -m venv .venv && source .venv/bin/activate\npip install khojo\n# if you need system-wide (not recommended): sudo pip3 install khojo";
+  }
+}
+
+function getPlatformNote(platform: Platform, tab: SdkTab): string | null {
+  if (tab === "javascript") {
+    if (platform === "windows") return "Run in PowerShell or Command Prompt. Node.js ≥ 18 required.";
+    if (platform === "macos-apple") return "Node.js runs natively on Apple Silicon. Ensure you install the arm64 Node.js binary from nodejs.org.";
+    return null;
+  }
+  if (tab === "python") {
+    if (platform === "windows") return "Python 3.8+ required. Download from python.org and ensure 'Add to PATH' is checked during installation.";
+    if (platform === "macos-intel") return "Python 3.8+ required. Use the official installer from python.org or Homebrew (brew install python@3).";
+    if (platform === "macos-apple") return "Python 3.8+ required. Homebrew and pyenv both provide native arm64 builds (brew install python@3).";
+    if (platform === "linux") return "Python 3.8+ required. Most distros ship Python 3; install pip with: sudo apt install python3-pip or sudo dnf install python3-pip.";
+  }
+  return null;
+}
+
 export default function SettingsPage() {
-  const { activeProject, refreshProjects, user, setActiveProjectId } = useAuth();
+  const { activeProject, refreshProjects, setActiveProjectId } = useAuth();
   const [projectName, setProjectName] = useState(activeProject?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
   const [keyRevealed, setKeyRevealed] = useState(false);
-  const [sdkTab, setSdkTab] = useState<"javascript" | "python" | "curl">("javascript");
+  const [sdkTab, setSdkTab] = useState<SdkTab>("javascript");
+  const [platform, setPlatform] = useState<Platform>("macos-apple");
   const [deleting, setDeleting] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
   const navigate = useNavigate();
@@ -34,18 +86,20 @@ export default function SettingsPage() {
     setSaving(true);
     const { error } = await supabase
       .from("projects")
-      .update({ name: projectName.trim() } as any)
+      .update({ name: projectName.trim() })
       .eq("id", activeProject.id);
     setSaving(false);
-    if (error) toast.error("Failed to save");
-    else {
+    if (error) {
+      toast.error("Failed to save project name");
+      console.error(JSON.stringify({ level: "error", message: "saveProject failed", error: error.message }));
+    } else {
       toast.success("Project name saved");
       refreshProjects();
     }
   };
 
   const copyKey = () => {
-    navigator.clipboard.writeText(apiKey);
+    navigator.clipboard.writeText(apiKey).catch(() => toast.error("Clipboard access denied"));
     setKeyCopied(true);
     toast.success("API key copied");
     setTimeout(() => setKeyCopied(false), 2000);
@@ -57,11 +111,13 @@ export default function SettingsPage() {
     const newKey = crypto.randomUUID();
     const { error } = await supabase
       .from("projects")
-      .update({ api_key: newKey } as any)
+      .update({ api_key: newKey })
       .eq("id", activeProject.id);
     setRegenerating(false);
-    if (error) toast.error("Failed to regenerate key");
-    else {
+    if (error) {
+      toast.error("Failed to regenerate key");
+      console.error(JSON.stringify({ level: "error", message: "regenerateKey failed", error: error.message }));
+    } else {
       toast.success("API key regenerated");
       refreshProjects();
       setKeyRevealed(true);
@@ -72,10 +128,12 @@ export default function SettingsPage() {
     if (!activeProject) return;
     const { error } = await supabase
       .from("projects")
-      .update({ monitoring_enabled: !activeProject.monitoring_enabled } as any)
+      .update({ monitoring_enabled: !activeProject.monitoring_enabled })
       .eq("id", activeProject.id);
-    if (error) toast.error("Failed to update");
-    else {
+    if (error) {
+      toast.error("Failed to update monitoring status");
+      console.error(JSON.stringify({ level: "error", message: "toggleMonitoring failed", error: error.message }));
+    } else {
       toast.success(activeProject.monitoring_enabled ? "Monitoring paused" : "Monitoring enabled");
       refreshProjects();
     }
@@ -89,20 +147,23 @@ export default function SettingsPage() {
       .delete()
       .eq("project_id", activeProject.id);
     setDeleting(false);
-    if (error) toast.error("Failed to delete runs");
-    else toast.success("All runs deleted for this project");
+    if (error) {
+      toast.error("Failed to delete runs");
+      console.error(JSON.stringify({ level: "error", message: "deleteAllRuns failed", error: error.message }));
+    } else {
+      toast.success("All runs deleted for this project");
+    }
   };
 
   const deleteProject = async () => {
     if (!activeProject) return;
     setDeletingProject(true);
-    // Delete all runs first
     await supabase.from("runs").delete().eq("project_id", activeProject.id);
-    // Delete the project
     const { error } = await supabase.from("projects").delete().eq("id", activeProject.id);
     setDeletingProject(false);
     if (error) {
       toast.error("Failed to delete project");
+      console.error(JSON.stringify({ level: "error", message: "deleteProject failed", error: error.message }));
     } else {
       toast.success(`Project "${activeProject.name}" deleted`);
       await refreshProjects();
@@ -112,6 +173,8 @@ export default function SettingsPage() {
 
   const maskedKey = `${"•".repeat(Math.max(0, apiKey.length - 8))}${apiKey.slice(-8)}`;
 
+  const supabaseProjectId = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "<project-id>";
+
   const jsSnippet = `import { trackAI } from '@khojo/sdk'
 
 const client = trackAI({ apiKey: '${apiKey}' })
@@ -119,10 +182,10 @@ const client = trackAI({ apiKey: '${apiKey}' })
 await client.track({
   input: userMessage,
   output: aiResponse,
-  context: retrievedDocs,
-  prompt: systemPrompt,
-  model: 'gpt-4o',
-  sessionId: conversationId
+  context: retrievedDocs,   // optional
+  prompt: systemPrompt,      // optional
+  model: 'gpt-4o',           // optional
+  sessionId: conversationId  // optional
 })`;
 
   const pySnippet = `from khojo import track_ai
@@ -132,13 +195,13 @@ client = track_ai(api_key="${apiKey}")
 client.track(
   input=user_message,
   output=ai_response,
-  context=retrieved_docs,
-  prompt=system_prompt,
-  model="gpt-4o",
-  session_id=conversation_id
+  context=retrieved_docs,    # optional
+  prompt=system_prompt,       # optional
+  model="gpt-4o",             # optional
+  session_id=conversation_id  # optional
 )`;
 
-  const curlSnippet = `curl -X POST https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ingest \\
+  const curlSnippet = `curl -X POST https://${supabaseProjectId}.supabase.co/functions/v1/ingest \\
   -H "Authorization: Bearer ${apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -147,6 +210,23 @@ client.track(
     "context": "Policy: 14 day refund window",
     "model": "gpt-4o"
   }'`;
+
+  const curlSnippetWindows = `curl -X POST https://${supabaseProjectId}.supabase.co/functions/v1/ingest ^
+  -H "Authorization: Bearer ${apiKey}" ^
+  -H "Content-Type: application/json" ^
+  -d "{\\"input\\": \\"What is the refund policy?\\", \\"output\\": \\"Refunds within 30 days...\\", \\"context\\": \\"Policy: 14 day refund window\\", \\"model\\": \\"gpt-4o\\"}"`;
+
+  const installCommand = getInstallCommand(platform, sdkTab);
+  const platformNote = getPlatformNote(platform, sdkTab);
+
+  const usageSnippet =
+    sdkTab === "javascript"
+      ? jsSnippet
+      : sdkTab === "python"
+      ? pySnippet
+      : platform === "windows"
+      ? curlSnippetWindows
+      : curlSnippet;
 
   if (!activeProject) {
     return (
@@ -167,8 +247,15 @@ client.track(
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <h3 className="text-sm font-medium text-foreground">Project name</h3>
         <div className="flex items-center gap-2">
-          <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="My AI App" className="flex-1" />
-          <Button onClick={saveProject} disabled={saving} size="sm">{saving ? "Saving..." : "Save"}</Button>
+          <Input
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            placeholder="My AI App"
+            className="flex-1"
+          />
+          <Button onClick={saveProject} disabled={saving} size="sm">
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </div>
       </div>
 
@@ -176,7 +263,9 @@ client.track(
       <div className="rounded-lg border border-border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {activeProject.monitoring_enabled ? <Radio className="h-4 w-4 text-success" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
+            {activeProject.monitoring_enabled
+              ? <Radio className="h-4 w-4 text-success" />
+              : <WifiOff className="h-4 w-4 text-muted-foreground" />}
             <div>
               <h3 className="text-sm font-medium text-foreground">Real-time monitoring</h3>
               <p className="text-xs text-muted-foreground">When off, the API will reject incoming runs for this project</p>
@@ -230,20 +319,68 @@ client.track(
           <h3 className="text-sm font-medium text-foreground">SDK Integration</h3>
           <p className="text-xs text-muted-foreground mt-1">Add tracking to your AI calls</p>
         </div>
-        <div className="flex gap-1">
-          {(["javascript", "python", "curl"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setSdkTab(t)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                sdkTab === t ? "bg-primary text-primary-foreground" : "bg-surface-1 text-muted-foreground hover:text-foreground border border-border"
-              }`}
-            >
-              {t === "javascript" ? "JavaScript" : t === "python" ? "Python" : "cURL"}
-            </button>
-          ))}
+
+        {/* Platform selector */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Platform</p>
+          <div className="flex flex-wrap gap-1">
+            {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPlatform(p)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  platform === p
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-1 text-muted-foreground hover:text-foreground border border-border"
+                }`}
+              >
+                {PLATFORM_LABELS[p]}
+              </button>
+            ))}
+          </div>
         </div>
-        <CodeBlock code={sdkTab === "javascript" ? jsSnippet : sdkTab === "python" ? pySnippet : curlSnippet} />
+
+        {/* Language tab */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Language</p>
+          <div className="flex gap-1">
+            {(["javascript", "python", "curl"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setSdkTab(t)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  sdkTab === t
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-surface-1 text-muted-foreground hover:text-foreground border border-border"
+                }`}
+              >
+                {t === "javascript" ? "JavaScript / TypeScript" : t === "python" ? "Python" : "cURL"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Platform note */}
+        {platformNote && (
+          <div className="flex items-start gap-2 p-3 rounded-md bg-info/10 border border-info/20 text-xs text-muted-foreground">
+            <span className="shrink-0">ℹ️</span>
+            <span>{platformNote}</span>
+          </div>
+        )}
+
+        {/* Installation */}
+        {installCommand && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-1.5">Installation</p>
+            <CodeBlock code={installCommand} />
+          </div>
+        )}
+
+        {/* Usage */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">Usage</p>
+          <CodeBlock code={usageSnippet} />
+        </div>
       </div>
 
       {/* Danger zone */}
@@ -270,7 +407,11 @@ client.track(
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteAllRuns} disabled={deleting} className="bg-destructive text-destructive-foreground">
+                <AlertDialogAction
+                  onClick={deleteAllRuns}
+                  disabled={deleting}
+                  className="bg-destructive text-destructive-foreground"
+                >
                   {deleting ? "Deleting..." : "Delete all"}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -298,7 +439,11 @@ client.track(
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteProject} disabled={deletingProject} className="bg-destructive text-destructive-foreground">
+                <AlertDialogAction
+                  onClick={deleteProject}
+                  disabled={deletingProject}
+                  className="bg-destructive text-destructive-foreground"
+                >
                   {deletingProject ? "Deleting..." : "Delete project"}
                 </AlertDialogAction>
               </AlertDialogFooter>

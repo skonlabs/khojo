@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Terminal, Settings, Command, Search, LogOut, Zap, MessageSquare } from "lucide-react";
+import { Activity, AlertTriangle, Terminal, Settings, Command, Search, LogOut, Zap, HelpCircle, BookOpen, MessageSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";

@@ -41,7 +41,7 @@ export default function SessionsPage() {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3 max-w-md">
-          <h2 className="text-lg font-semibold text-foreground">No sessions yet</h2>
+          <h2 className="text-foreground">No sessions yet</h2>
           <p className="text-sm text-muted-foreground">Pass a <code className="bg-surface-1 px-1 rounded text-xs font-mono">session_id</code> in your trackAI() calls to group related runs.</p>
         </div>
       </div>

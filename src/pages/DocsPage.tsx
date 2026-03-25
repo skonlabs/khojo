@@ -206,7 +206,7 @@ Output:  "Premium subscribers can request a full refund within 30 days
         blocks: [
           { type: "heading", content: "When to use the Issues page" },
           { type: "text", content: "Use Issues when you want to see **what's broken across all your runs**, not just one. It groups failures by type and lets you prioritize what to fix first." },
-          { type: "image", src: issuesImg, alt: "Issues page showing failure types and filters", caption: "Issues table with failure type badges, confidence levels, and dismiss actions" },
+          { type: "mockup", variant: "issues", caption: "Issues table with failure type badges, confidence levels, and dismiss actions" },
           { type: "heading", content: "How issues are prioritized" },
           { type: "table", headers: ["Priority", "Failure Types", "Why"], rows: [
             ["🔥 Critical", "Hallucination, high-frequency failures", "Users are getting wrong information — fix immediately"],

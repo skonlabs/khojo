@@ -87,17 +87,35 @@ export function AppSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Help</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Contact Support" onClick={() => setFeedbackOpen(true)}>
+                    <MessageSquare className="h-4 w-4" />
+                    {!collapsed && <span>Contact Support</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {helpItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                      <NavLink to={item.url} end className="text-sm" activeClassName="bg-accent text-accent-foreground font-medium">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
 
         <SidebarFooter className="p-3">
           {!collapsed && user && (
             <div className="space-y-2">
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
-              >
-                <MessageSquare className="h-3 w-3" /> Send feedback
-              </button>
               <div className="text-xs text-muted-foreground truncate">{user.email}</div>
               <button
                 onClick={signOut}

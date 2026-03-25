@@ -29,7 +29,7 @@ const mockAnalyze = (input: string, output: string, context: string): AnalysisRe
   if (context) {
     const contextNumbers = context.match(/\d+/g) || [];
     const outputNumbers = output.match(/\d+/g) || [];
-    const mismatchedNums = outputNumbers.filter(n => !contextNumbers.includes(n) && parseInt(n) > 1);
+    const mismatchedNums = outputNumbers.filter((n: string) => !contextNumbers.includes(n) && parseInt(n) > 1);
 
     if (mismatchedNums.length > 0) {
       results.failureTypes.push('hallucination');

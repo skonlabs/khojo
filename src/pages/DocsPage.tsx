@@ -22,7 +22,7 @@ type Block =
   | { type: "text"; content: string }
   | { type: "heading"; content: string }
   | { type: "subheading"; content: string }
-  | { type: "image"; src: string; alt: string; caption?: string }
+  | { type: "mockup"; variant: "overview" | "analyzer" | "issues" | "run-detail"; caption?: string }
   | { type: "code"; lang: string; code: string }
   | { type: "list"; items: string[] }
   | { type: "numbered"; items: string[] }

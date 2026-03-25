@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ["'Courier Prime'", "'Courier New'", "Courier", "monospace"],
+        mono: ["'Courier Prime'", "'Courier New'", "Courier", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

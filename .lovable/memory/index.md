@@ -2,7 +2,8 @@ Design system tokens, failure color mappings, and auth flow preferences for khoj
 
 - Brand: khojo (AI debugging tool for developers)
 - Theme: Dark mode default, Vercel/Linear inspired
-- Fonts: Inter (UI), JetBrains Mono (code)
+- Font: Courier Prime (monospace) for ALL text — headings, body, code, UI
+- Base font size: 13px, line-height 1.6
 - Failure colors: hallucination=purple, incomplete=orange, irrelevant=blue, inconsistent=pink, verbose=teal
 - Auth: Supabase email/password, auto-profile creation via DB trigger
 - Tables: profiles, projects (multi-project with api_key, monitoring_enabled), runs (with project_id), feedback
@@ -12,3 +13,4 @@ Design system tokens, failure color mappings, and auth flow preferences for khoj
 - Monitoring toggle: When off, ingest returns 403
 - Feedback: In-app form stored in feedback table
 - Onboarding: SDK step is optional, Instant Analyzer highlighted as quick start
+- Analyzer: includes prompt textarea and model selector

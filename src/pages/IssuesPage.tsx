@@ -62,7 +62,7 @@ export default function IssuesPage() {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3 max-w-md">
-          <h2 className="text-lg font-semibold text-foreground">No issues detected yet</h2>
+          <h2 className="text-foreground">No issues detected yet</h2>
           <p className="text-sm text-muted-foreground">Add the SDK to your app and run it to start seeing data.</p>
           <div className="bg-surface-1 rounded-lg p-4 border border-border text-left">
             <code className="text-xs font-mono text-muted-foreground">npm install @khojo/sdk</code>

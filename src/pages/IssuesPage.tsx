@@ -1,191 +1,140 @@
 import { useState, useMemo } from "react";
-import { issueGroups, sampleRuns, failureTypeConfig, type FailureType } from "@/data/sampleData";
-import { FailureBadge } from "@/components/FailureBadge";
-import { CodeBlock } from "@/components/CodeBlock";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronRight, X, AlertTriangle, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { useRuns, Run } from "@/hooks/useRuns";
+import { FailureBadge, ConfidenceBadge } from "@/components/FailureBadge";
+import { timeAgo } from "@/lib/timeAgo";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const FAILURE_TYPES = ["hallucination", "incomplete", "irrelevant", "inconsistent", "verbose"];
+const CONFIDENCE_LEVELS = ["high", "medium", "low"];
+const PAGE_SIZE = 25;
 
 export default function IssuesPage() {
+  const { data: runs, isLoading, refetch } = useRuns();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const filterType = searchParams.get('type') as FailureType | null;
-  const [expandedGroup, setExpandedGroup] = useState<FailureType | null>(filterType);
-  const [expandedRun, setExpandedRun] = useState<string | null>(null);
-  const [dismissedRuns, setDismissedRuns] = useState<Set<string>>(new Set());
-  const [showDismissed, setShowDismissed] = useState(false);
-  const [filterConfidence, setFilterConfidence] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [confidenceFilter, setConfidenceFilter] = useState("all");
+  const [hideDismissed, setHideDismissed] = useState(true);
+  const [page, setPage] = useState(1);
 
-  const groups = useMemo(() => {
-    let g = filterType ? issueGroups.filter(g => g.type === filterType) : issueGroups;
-    return g;
-  }, [filterType]);
+  const issues = useMemo(() => {
+    if (!runs) return [];
+    let filtered = runs.filter((r) => r.primary_failure);
+    if (hideDismissed) filtered = filtered.filter((r) => !r.dismissed);
+    if (typeFilter !== "all") filtered = filtered.filter((r) => r.failure_types?.includes(typeFilter));
+    if (confidenceFilter !== "all") filtered = filtered.filter((r) => r.confidence === confidenceFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      filtered = filtered.filter((r) => r.input.toLowerCase().includes(q));
+    }
+    return filtered;
+  }, [runs, typeFilter, confidenceFilter, search, hideDismissed]);
 
-  const dismissRun = (runId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDismissedRuns(prev => {
-      const next = new Set(prev);
-      if (next.has(runId)) {
-        next.delete(runId);
-        toast.info("Issue restored");
-      } else {
-        next.add(runId);
-        toast.success("Issue dismissed — similar issues will be deprioritized");
-      }
-      return next;
-    });
+  const totalPages = Math.ceil(issues.length / PAGE_SIZE);
+  const paged = issues.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const dismissRun = async (run: Run) => {
+    const { error } = await supabase.from("runs").update({ dismissed: !run.dismissed } as any).eq("id", run.id);
+    if (error) toast.error("Failed to update");
+    else { toast.success(run.dismissed ? "Restored" : "Dismissed"); refetch(); }
   };
 
-  return (
-    <div className="p-6 max-w-6xl mx-auto animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Issues</h1>
-          <p className="text-sm text-muted-foreground mt-1">Grouped failure patterns across runs</p>
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4 animate-fade-in">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!runs || runs.filter((r) => r.primary_failure).length === 0) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3 max-w-md">
+          <h2 className="text-lg font-semibold text-foreground">No issues detected yet</h2>
+          <p className="text-sm text-muted-foreground">Add the SDK to your app and run it to start seeing data.</p>
+          <div className="bg-surface-1 rounded-lg p-4 border border-border text-left">
+            <code className="text-xs font-mono text-muted-foreground">npm install @khojo/sdk</code>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-4 animate-fade-in">
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-foreground">All issues</h1>
+        <span className="text-xs bg-surface-2 text-muted-foreground rounded-full px-2 py-0.5">{issues.length}</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Input placeholder="Search by input..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-64" />
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All failure types</SelectItem>
+            {FAILURE_TYPES.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={confidenceFilter} onValueChange={(v) => { setConfidenceFilter(v); setPage(1); }}>
+          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All confidence</SelectItem>
+            {CONFIDENCE_LEVELS.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
-          {/* Confidence filter */}
-          <select
-            value={filterConfidence}
-            onChange={e => setFilterConfidence(e.target.value as typeof filterConfidence)}
-            className="bg-surface-1 border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="all">All confidence</option>
-            <option value="high">High only</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-
-          {/* Show dismissed toggle */}
-          <button
-            onClick={() => setShowDismissed(!showDismissed)}
-            className={`flex items-center gap-1.5 text-xs rounded-md px-2.5 py-1.5 border border-border transition-colors ${
-              showDismissed ? 'bg-surface-2 text-foreground' : 'bg-surface-1 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {showDismissed ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-            {showDismissed ? 'Showing dismissed' : 'Dismissed hidden'}
-          </button>
-
-          {filterType && (
-            <button
-              onClick={() => navigate('/issues')}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground bg-surface-1 rounded-md px-2.5 py-1.5 border border-border hover:bg-surface-2"
-            >
-              <FailureBadge type={filterType} />
-              <X className="h-3 w-3" />
-            </button>
-          )}
+          <Switch id="hide-dismissed" checked={hideDismissed} onCheckedChange={setHideDismissed} />
+          <Label htmlFor="hide-dismissed" className="text-xs text-muted-foreground">Hide dismissed</Label>
         </div>
       </div>
 
-      <div className="space-y-2">
-        {groups.map(group => {
-          const isExpanded = expandedGroup === group.type;
-          const groupRuns = group.runs
-            .map(id => sampleRuns.find(r => r.id === id)!)
-            .filter(Boolean)
-            .filter(r => filterConfidence === 'all' || r.confidence === filterConfidence)
-            .filter(r => showDismissed || !dismissedRuns.has(r.id));
-
-          if (groupRuns.length === 0 && !isExpanded) return null;
-
-          return (
-            <div key={group.type} className="rounded-lg border border-border bg-card overflow-hidden">
-              <button
-                onClick={() => setExpandedGroup(isExpanded ? null : group.type)}
-                className="w-full flex items-center justify-between p-4 hover:bg-surface-1 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                  <FailureBadge type={group.type} />
-                  <span className="text-sm font-medium text-foreground">{group.count} cases</span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className={`text-xs font-mono ${group.priority === 'critical' ? 'text-critical' : 'text-warning'}`}>
-                    {group.affectedPercentage}% of runs
-                  </span>
-                  {dismissedRuns.size > 0 && groupRuns.length < group.runs.length && (
-                    <span className="text-[10px] text-muted-foreground">({group.runs.length - groupRuns.length} dismissed)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {group.priority === 'critical' ? (
-                    <span className="flex items-center gap-1 text-xs text-critical">
-                      <AlertTriangle className="h-3 w-3" /> Critical
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-warning">
-                      <TrendingUp className="h-3 w-3" /> Improvement
-                    </span>
-                  )}
-                </div>
-              </button>
-
-              {isExpanded && (
-                <div className="border-t border-border">
-                  {groupRuns.length === 0 ? (
-                    <div className="p-4 pl-10 text-sm text-muted-foreground">No issues match current filters.</div>
-                  ) : (
-                    groupRuns.map(run => {
-                      const isRunExpanded = expandedRun === run.id;
-                      const isDismissed = dismissedRuns.has(run.id);
-                      return (
-                        <div key={run.id} className={`border-b border-border last:border-b-0 ${isDismissed ? 'opacity-50' : ''}`}>
-                          <div className="flex items-center">
-                            <button
-                              onClick={() => setExpandedRun(isRunExpanded ? null : run.id)}
-                              className="flex-1 flex items-center gap-3 p-3 pl-10 hover:bg-surface-1 transition-colors text-left"
-                            >
-                              {isRunExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-                              <span className="text-xs font-mono text-muted-foreground">{run.id}</span>
-                              <span className="text-sm text-foreground truncate flex-1">{run.whatFailed}</span>
-                              <span className="text-xs font-mono text-muted-foreground">{run.source}</span>
-                            </button>
-                            <button
-                              onClick={(e) => dismissRun(run.id, e)}
-                              className="p-2 mr-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
-                              title={isDismissed ? 'Restore issue' : 'Dismiss issue'}
-                            >
-                              {isDismissed ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                            </button>
-                          </div>
-
-                          {isRunExpanded && (
-                            <div className="px-10 pb-4 space-y-3 animate-fade-in">
-                              <IssueDetail label="❌ What Failed" value={run.whatFailed} />
-                              <IssueDetail label="🔍 Proof" value={run.whyFailed} />
-                              <IssueDetail label="⚠️ Root Cause" value={run.rootCause} />
-                              <div>
-                                <span className="text-xs font-medium text-muted-foreground block mb-1.5">✅ Fix</span>
-                                <CodeBlock code={run.fix} />
-                              </div>
-                              <button
-                                onClick={() => navigate(`/runs/${run.id}`)}
-                                className="text-xs text-primary hover:underline"
-                              >
-                                View full run with highlighted output →
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-surface-1">
+              <th className="text-left p-3 font-medium text-muted-foreground">Input</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Failure</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Confidence</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Tokens</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Time</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {paged.map((run) => (
+              <tr key={run.id} className={`hover:bg-surface-1 transition-colors ${run.dismissed ? "opacity-50" : ""}`}>
+                <td className="p-3"><button onClick={() => navigate(`/runs/${run.id}`)} className="text-foreground hover:text-primary text-left truncate max-w-[300px] block">{run.input.slice(0, 60)}{run.input.length > 60 ? "…" : ""}</button></td>
+                <td className="p-3">{run.primary_failure && <FailureBadge type={run.primary_failure} />}</td>
+                <td className="p-3"><ConfidenceBadge level={run.confidence} /></td>
+                <td className="p-3 text-muted-foreground font-mono text-xs">{run.total_tokens.toLocaleString()}</td>
+                <td className="p-3 text-muted-foreground text-xs" title={run.timestamp}>{timeAgo(run.timestamp)}</td>
+                <td className="p-3"><Button variant="ghost" size="sm" className="text-xs" onClick={() => dismissRun(run)}>{run.dismissed ? "Restore" : "Dismiss"}</Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
-  );
-}
 
-function IssueDetail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span className="text-xs font-medium text-muted-foreground block mb-1">{label}</span>
-      <p className="text-sm text-foreground bg-surface-1 rounded-md p-2.5 border border-border">{value}</p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, issues.length)} of {issues.length} issues</span>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-3 w-3" /> Prev</Button>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next <ChevronRight className="h-3 w-3" /></Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          api_key: string
+          created_at: string
+          id: string
+          project_name: string | null
+        }
+        Insert: {
+          api_key?: string
+          created_at?: string
+          id: string
+          project_name?: string | null
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          id?: string
+          project_name?: string | null
+        }
+        Relationships: []
+      }
+      runs: {
+        Row: {
+          confidence: string | null
+          context: string | null
+          context_tokens: number
+          dismissed: boolean
+          evaluated_at: string | null
+          explanation: string | null
+          failure_types: string[] | null
+          fix: string | null
+          id: string
+          input: string
+          input_tokens: number
+          model: string | null
+          output: string
+          output_tokens: number
+          primary_failure: string | null
+          prompt: string | null
+          proof: Json | null
+          root_cause: string | null
+          session_id: string | null
+          timestamp: string
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          confidence?: string | null
+          context?: string | null
+          context_tokens?: number
+          dismissed?: boolean
+          evaluated_at?: string | null
+          explanation?: string | null
+          failure_types?: string[] | null
+          fix?: string | null
+          id?: string
+          input: string
+          input_tokens?: number
+          model?: string | null
+          output: string
+          output_tokens?: number
+          primary_failure?: string | null
+          prompt?: string | null
+          proof?: Json | null
+          root_cause?: string | null
+          session_id?: string | null
+          timestamp?: string
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          confidence?: string | null
+          context?: string | null
+          context_tokens?: number
+          dismissed?: boolean
+          evaluated_at?: string | null
+          explanation?: string | null
+          failure_types?: string[] | null
+          fix?: string | null
+          id?: string
+          input?: string
+          input_tokens?: number
+          model?: string | null
+          output?: string
+          output_tokens?: number
+          primary_failure?: string | null
+          prompt?: string | null
+          proof?: Json | null
+          root_cause?: string | null
+          session_id?: string | null
+          timestamp?: string
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

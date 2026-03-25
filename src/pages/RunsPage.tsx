@@ -1,172 +1,58 @@
 import { useState, useMemo } from "react";
-import { sampleRuns, failureTypeConfig, type FailureType, type Confidence } from "@/data/sampleData";
+import { useRuns } from "@/hooks/useRuns";
 import { FailureBadge } from "@/components/FailureBadge";
+import { timeAgo } from "@/lib/timeAgo";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpDown, Filter, Search } from "lucide-react";
-
-type SortKey = 'timestamp' | 'tokens' | 'id';
-type SortDir = 'asc' | 'desc';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CheckCircle } from "lucide-react";
 
 export default function RunsPage() {
+  const { data: runs, isLoading } = useRuns();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<FailureType | 'all' | 'pass'>('all');
-  const [filterConfidence, setFilterConfidence] = useState<Confidence | 'all'>('all');
-  const [filterModel, setFilterModel] = useState<string>('all');
-  const [sortKey, setSortKey] = useState<SortKey>('timestamp');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
 
-  const models = useMemo(() => [...new Set(sampleRuns.map(r => r.model))], []);
-
-  const filteredRuns = useMemo(() => {
-    let runs = [...sampleRuns];
-
-    // Search
-    if (search) {
+  const filtered = useMemo(() => {
+    if (!runs) return [];
+    let result = [...runs];
+    if (typeFilter !== "all") result = result.filter((r) => r.failure_types?.includes(typeFilter));
+    if (search.trim()) {
       const q = search.toLowerCase();
-      runs = runs.filter(r =>
-        r.input.toLowerCase().includes(q) ||
-        r.id.toLowerCase().includes(q) ||
-        r.source.toLowerCase().includes(q) ||
-        r.tags?.some(t => t.toLowerCase().includes(q))
-      );
+      result = result.filter((r) => r.input.toLowerCase().includes(q) || r.output.toLowerCase().includes(q));
     }
+    return result;
+  }, [runs, typeFilter, search]);
 
-    // Filter by type
-    if (filterType === 'pass') {
-      runs = runs.filter(r => r.failureTypes.length === 0);
-    } else if (filterType !== 'all') {
-      runs = runs.filter(r => r.failureTypes.includes(filterType));
-    }
-
-    // Filter by confidence
-    if (filterConfidence !== 'all') {
-      runs = runs.filter(r => r.confidence === filterConfidence);
-    }
-
-    // Filter by model
-    if (filterModel !== 'all') {
-      runs = runs.filter(r => r.model === filterModel);
-    }
-
-    // Sort
-    runs.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === 'timestamp') cmp = a.timestamp.localeCompare(b.timestamp);
-      else if (sortKey === 'tokens') cmp = a.tokens.total - b.tokens.total;
-      else if (sortKey === 'id') cmp = a.id.localeCompare(b.id);
-      return sortDir === 'desc' ? -cmp : cmp;
-    });
-
-    return runs;
-  }, [search, filterType, filterConfidence, filterModel, sortKey, sortDir]);
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('desc');
-    }
-  };
-
-  const failureTypes: (FailureType | 'all' | 'pass')[] = ['all', 'pass', 'hallucination', 'incomplete', 'irrelevant', 'verbose', 'inconsistent'];
+  if (isLoading) {
+    return <div className="p-6 space-y-4 animate-fade-in"><Skeleton className="h-8 w-32" /><Skeleton className="h-64" /></div>;
+  }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto animate-fade-in">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Runs</h1>
-        <p className="text-sm text-muted-foreground mt-1">All captured AI runs ({filteredRuns.length} of {sampleRuns.length})</p>
+    <div className="p-6 space-y-4 animate-fade-in">
+      <h1 className="text-xl font-semibold text-foreground">Runs</h1>
+      <div className="flex gap-3">
+        <Input placeholder="Search runs..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            {["hallucination", "incomplete", "irrelevant", "inconsistent", "verbose"].map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
-
-      {/* Filters bar */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search runs..."
-            className="w-full bg-surface-1 border border-border rounded-md pl-8 pr-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-
-        {/* Type filter */}
-        <div className="flex items-center gap-1">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as typeof filterType)}
-            className="bg-surface-1 border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {failureTypes.map(t => (
-              <option key={t} value={t}>
-                {t === 'all' ? 'All types' : t === 'pass' ? '✓ Passed' : failureTypeConfig[t].emoji + ' ' + failureTypeConfig[t].label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Confidence filter */}
-        <select
-          value={filterConfidence}
-          onChange={e => setFilterConfidence(e.target.value as typeof filterConfidence)}
-          className="bg-surface-1 border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="all">All confidence</option>
-          <option value="high">High confidence</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-
-        {/* Model filter */}
-        <select
-          value={filterModel}
-          onChange={e => setFilterModel(e.target.value)}
-          className="bg-surface-1 border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="all">All models</option>
-          {models.map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="grid grid-cols-[70px_1fr_auto_110px_80px] gap-3 px-4 py-2.5 bg-surface-1 border-b border-border text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          <button onClick={() => toggleSort('id')} className="flex items-center gap-1 hover:text-foreground transition-colors text-left">
-            ID <ArrowUpDown className="h-2.5 w-2.5" />
-          </button>
-          <span>Input</span>
-          <span>Issues</span>
-          <span>Source</span>
-          <button onClick={() => toggleSort('tokens')} className="flex items-center gap-1 hover:text-foreground transition-colors justify-end">
-            Tokens <ArrowUpDown className="h-2.5 w-2.5" />
-          </button>
-        </div>
-        {filteredRuns.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No runs match your filters.</div>
+      <div className="rounded-lg border border-border bg-card divide-y divide-border overflow-hidden">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">No runs found</div>
         ) : (
-          filteredRuns.map(run => (
-            <button
-              key={run.id}
-              onClick={() => navigate(`/runs/${run.id}`)}
-              className="w-full grid grid-cols-[70px_1fr_auto_110px_80px] gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-1 transition-colors text-left items-center"
-            >
-              <span className="text-xs font-mono text-muted-foreground">{run.id.replace('run-', '#')}</span>
-              <span className="text-sm text-foreground truncate">{run.input}</span>
-              <div className="flex gap-1">
-                {run.failureTypes.length > 0 ? (
-                  run.failureTypes.map(ft => <FailureBadge key={ft} type={ft} />)
-                ) : (
-                  <span className="text-xs text-primary font-medium">✓ Pass</span>
-                )}
-              </div>
-              <span className="text-xs font-mono text-muted-foreground truncate">{run.source}</span>
-              <span className="text-xs font-mono text-muted-foreground text-right">{run.tokens.total}</span>
+          filtered.map((run) => (
+            <button key={run.id} onClick={() => navigate(`/runs/${run.id}`)} className="w-full flex items-center gap-3 p-3 hover:bg-surface-1 transition-colors text-left">
+              <span className="text-xs text-muted-foreground shrink-0 w-16" title={run.timestamp}>{timeAgo(run.timestamp)}</span>
+              <span className="text-sm text-foreground truncate flex-1">{run.input.slice(0, 80)}{run.input.length > 80 ? "…" : ""}</span>
+              <span className="text-xs font-mono text-muted-foreground shrink-0">{run.total_tokens}t</span>
+              {run.model && <span className="text-xs bg-surface-2 text-muted-foreground rounded px-1.5 py-0.5 shrink-0">{run.model}</span>}
+              {run.primary_failure ? <FailureBadge type={run.primary_failure} /> : <CheckCircle className="h-4 w-4 text-success shrink-0" />}
             </button>
           ))
         )}

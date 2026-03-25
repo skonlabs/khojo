@@ -12,6 +12,7 @@ import RunDetailPage from "./pages/RunDetailPage";
 import SessionsPage from "./pages/SessionsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AnalyzerPage from "./pages/AnalyzerPage";
+import DocsPage from "./pages/DocsPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import OnboardingPage from "./pages/OnboardingPage";

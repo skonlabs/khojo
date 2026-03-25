@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -26,17 +26,25 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Look up API key
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
+    // Look up project by API key
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, user_id, monitoring_enabled")
       .eq("api_key", apiKey)
       .maybeSingle();
 
-    if (profileError || !profile) {
+    if (projectError || !project) {
       return new Response(
         JSON.stringify({ error: "Invalid API key" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check monitoring status
+    if (!project.monitoring_enabled) {
+      return new Response(
+        JSON.stringify({ error: "Monitoring is paused for this project" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -60,7 +68,8 @@ Deno.serve(async (req) => {
     const { data: run, error: insertError } = await supabase
       .from("runs")
       .insert({
-        user_id: profile.id,
+        user_id: project.user_id,
+        project_id: project.id,
         input: body.input,
         output: body.output,
         context: body.context ?? null,
@@ -83,7 +92,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Trigger evaluation asynchronously — don't await
+    // Trigger evaluation asynchronously
     const evaluateUrl = `${supabaseUrl}/functions/v1/evaluate`;
     fetch(evaluateUrl, {
       method: "POST",

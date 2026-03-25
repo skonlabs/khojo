@@ -8,6 +8,7 @@ import { toast } from "sonner";
 export interface Run {
   id: string;
   user_id: string;
+  project_id: string | null;
   timestamp: string;
   input: string;
   output: string;
@@ -35,17 +36,21 @@ export interface Run {
 }
 
 export function useRuns() {
-  const { user } = useAuth();
+  const { user, activeProject } = useAuth();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["runs", user?.id],
+    queryKey: ["runs", user?.id, activeProject?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
+      let q = supabase
         .from("runs")
         .select("*")
         .order("timestamp", { ascending: false });
+      if (activeProject) {
+        q = q.eq("project_id", activeProject.id);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as Run[];
     },
@@ -61,7 +66,7 @@ export function useRuns() {
         "postgres_changes",
         { event: "*", schema: "public", table: "runs", filter: `user_id=eq.${user.id}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["runs", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["runs", user.id, activeProject?.id] });
           toast.info("New run received");
         }
       )
@@ -70,7 +75,7 @@ export function useRuns() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [user, activeProject?.id, queryClient]);
 
   return query;
 }

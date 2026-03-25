@@ -11,6 +11,7 @@ import RunsPage from "./pages/RunsPage";
 import RunDetailPage from "./pages/RunDetailPage";
 import SessionsPage from "./pages/SessionsPage";
 import SettingsPage from "./pages/SettingsPage";
+import AnalyzerPage from "./pages/AnalyzerPage";
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/runs" element={<ProtectedRoute><AppLayout><RunsPage /></AppLayout></ProtectedRoute>} />
             <Route path="/runs/:id" element={<ProtectedRoute><AppLayout><RunDetailPage /></AppLayout></ProtectedRoute>} />
             <Route path="/sessions" element={<ProtectedRoute><AppLayout><SessionsPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/analyzer" element={<ProtectedRoute><AppLayout><AnalyzerPage /></AppLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

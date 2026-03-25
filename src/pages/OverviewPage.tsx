@@ -9,12 +9,28 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Cell,
   LineChart, Line, Legend, ReferenceLine, ResponsiveContainer,
 } from "recharts";
-import { Activity, AlertTriangle, Zap, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, Zap, TrendingUp, Radio, RadioOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function OverviewPage() {
-  const { profile } = useAuth();
+  const { activeProject, refreshProjects } = useAuth();
   const { data: runs, isLoading } = useRuns();
   const navigate = useNavigate();
+
+  const toggleMonitoring = async () => {
+    if (!activeProject) return;
+    const { error } = await supabase
+      .from("projects")
+      .update({ monitoring_enabled: !activeProject.monitoring_enabled } as any)
+      .eq("id", activeProject.id);
+    if (error) toast.error("Failed to update");
+    else {
+      toast.success(activeProject.monitoring_enabled ? "Monitoring paused" : "Monitoring enabled");
+      refreshProjects();
+    }
+  };
 
   const stats = useMemo(() => {
     if (!runs || runs.length === 0) return null;
@@ -22,8 +38,15 @@ export default function OverviewPage() {
     const withFailure = runs.filter((r) => r.failure_types && r.failure_types.length > 0);
     const failureRate = (withFailure.length / total) * 100;
     const avgTokens = Math.round(runs.reduce((s, r) => s + r.total_tokens, 0) / total);
+    const totalTokens = runs.reduce((s, r) => s + r.total_tokens, 0);
     const verboseCount = runs.filter((r) => r.failure_types?.includes("verbose")).length;
     const wasteRate = (verboseCount / total) * 100;
+    const evaluated = runs.filter((r) => r.evaluated_at).length;
+    const pending = total - evaluated;
+    const hallucinationCount = runs.filter((r) => r.failure_types?.includes("hallucination")).length;
+    const hallucinationRate = (hallucinationCount / total) * 100;
+    const uniqueSessions = new Set(runs.filter(r => r.session_id).map(r => r.session_id)).size;
+    const models = [...new Set(runs.filter(r => r.model).map(r => r.model))];
 
     const breakdownMap: Record<string, number> = {};
     for (const r of runs) {
@@ -54,7 +77,7 @@ export default function OverviewPage() {
 
     const topIssues = runs.filter((r) => r.primary_failure).slice(0, 5);
 
-    return { total, failureRate, avgTokens, wasteRate, breakdown, trend, topIssues };
+    return { total, failureRate, avgTokens, totalTokens, wasteRate, breakdown, trend, topIssues, pending, hallucinationRate, uniqueSessions, models };
   }, [runs]);
 
   if (isLoading) {
@@ -72,12 +95,23 @@ export default function OverviewPage() {
   if (!runs || runs.length === 0) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4 max-w-md">
+        <div className="text-center space-y-5 max-w-lg">
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Waiting for your first run...</h2>
-          <p className="text-sm text-muted-foreground">Add the SDK to your app and run it to start seeing data.</p>
+          <h2 className="text-lg font-semibold text-foreground">
+            {activeProject ? `Waiting for runs on "${activeProject.name}"...` : "Waiting for your first run..."}
+          </h2>
+          <p className="text-sm text-muted-foreground">Get started in seconds — no SDK required.</p>
+
+          <button
+            onClick={() => navigate("/analyzer")}
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <Zap className="h-4 w-4" /> Try Instant Analyzer
+          </button>
+
+          <div className="text-xs text-muted-foreground">or integrate the SDK for real-time monitoring:</div>
           <div className="bg-surface-1 rounded-lg p-4 border border-border text-left">
             <code className="text-xs font-mono text-muted-foreground">npm install @khojo/sdk</code>
           </div>
@@ -97,18 +131,63 @@ export default function OverviewPage() {
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Project health</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {profile?.project_name ? `${profile.project_name} · ` : ""}Last 30 days · {stats!.total} runs
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Project health</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {activeProject?.name ?? "All projects"} · Last 30 days · {stats!.total} runs
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/analyzer")}
+            className="text-xs"
+          >
+            <Zap className="h-3.5 w-3.5 mr-1" /> Instant Analyzer
+          </Button>
+          {activeProject && (
+            <Button
+              variant={activeProject.monitoring_enabled ? "outline" : "default"}
+              size="sm"
+              onClick={toggleMonitoring}
+              className="text-xs"
+            >
+              {activeProject.monitoring_enabled ? (
+                <><RadioOff className="h-3.5 w-3.5 mr-1" /> Pause monitoring</>
+              ) : (
+                <><Radio className="h-3.5 w-3.5 mr-1" /> Enable monitoring</>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Activity} label="Total runs" value={stats!.total.toLocaleString()} />
         <StatCard icon={AlertTriangle} label="Failure rate" value={`${stats!.failureRate.toFixed(1)}%`} valueClass={failureRateColor} />
         <StatCard icon={Zap} label="Avg tokens/run" value={stats!.avgTokens.toLocaleString()} />
-        <StatCard icon={TrendingUp} label="Token waste" value={`${stats!.wasteRate.toFixed(1)}%`} />
+        <StatCard icon={TrendingUp} label="Hallucination rate" value={`${stats!.hallucinationRate.toFixed(1)}%`} valueClass={stats!.hallucinationRate > 5 ? "text-critical" : "text-success"} />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <span className="text-xs text-muted-foreground">Total tokens</span>
+          <div className="text-lg font-semibold text-foreground mt-1">{stats!.totalTokens.toLocaleString()}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <span className="text-xs text-muted-foreground">Token waste</span>
+          <div className="text-lg font-semibold text-foreground mt-1">{stats!.wasteRate.toFixed(1)}%</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <span className="text-xs text-muted-foreground">Sessions</span>
+          <div className="text-lg font-semibold text-foreground mt-1">{stats!.uniqueSessions}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <span className="text-xs text-muted-foreground">Pending eval</span>
+          <div className={`text-lg font-semibold mt-1 ${stats!.pending > 0 ? "text-warning" : "text-success"}`}>{stats!.pending}</div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

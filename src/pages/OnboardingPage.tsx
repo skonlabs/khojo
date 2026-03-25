@@ -123,7 +123,7 @@ client.track(
         {step === 2 && (
           <div className="rounded-lg border border-border bg-card p-6 space-y-4">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Your API key</h2>
+              <h2 className="text-foreground">Your API key</h2>
               <p className="text-sm text-muted-foreground mt-1">Use this to authenticate SDK calls</p>
             </div>
             <div className="flex items-center gap-2">

@@ -2,11 +2,6 @@ import { useState } from "react";
 import { Zap, Activity, AlertTriangle, Terminal, Command, Settings, Search, BookOpen, ChevronRight, Code, Eye, Wrench, HelpCircle, Clock, CheckCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import overviewImg from "@/assets/docs/overview-dashboard.jpg";
-import analyzerImg from "@/assets/docs/analyzer-page.jpg";
-import runDetailImg from "@/assets/docs/run-detail.jpg";
-import issuesImg from "@/assets/docs/issues-page.jpg";
-
 // ——————————————————————————————————————————————
 // Documentation data
 // ——————————————————————————————————————————————

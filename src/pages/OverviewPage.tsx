@@ -23,7 +23,7 @@ export default function OverviewPage() {
     if (!activeProject) return;
     const { error } = await supabase
       .from("projects")
-      .update({ monitoring_enabled: !activeProject.monitoring_enabled } as any)
+      .update({ monitoring_enabled: !activeProject.monitoring_enabled })
       .eq("id", activeProject.id);
     if (error) toast.error("Failed to update");
     else {

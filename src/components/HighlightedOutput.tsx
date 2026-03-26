@@ -30,8 +30,9 @@ export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) 
     return <span className="whitespace-pre-wrap">{text}</span>;
   }
 
-  const outputHighlights = highlights.filter(h => text.includes(h.text));
-  const missingHighlights = highlights.filter(h => !text.includes(h.text) && h.type === "missing");
+  const textLower = text.toLowerCase();
+  const outputHighlights = highlights.filter(h => textLower.includes(h.text.toLowerCase()));
+  const missingHighlights = highlights.filter(h => !textLower.includes(h.text.toLowerCase()) && h.type === "missing");
 
   if (outputHighlights.length === 0 && missingHighlights.length === 0) {
     return <span className="whitespace-pre-wrap">{text}</span>;
@@ -41,7 +42,7 @@ export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) 
   const segments: Segment[] = [];
 
   const sorted = outputHighlights
-    .map(h => ({ ...h, index: text.indexOf(h.text) }))
+    .map(h => ({ ...h, index: textLower.indexOf(h.text.toLowerCase()) }))
     .filter(h => h.index !== -1)
     .sort((a, b) => a.index - b.index);
 
@@ -51,7 +52,9 @@ export function HighlightedOutput({ text, highlights }: HighlightedOutputProps) 
     if (h.index > lastEnd) {
       segments.push({ text: text.slice(lastEnd, h.index) });
     }
-    segments.push({ text: h.text, highlight: h });
+    // Use the original casing from the source text for display
+    const displayText = text.slice(h.index, h.index + h.text.length);
+    segments.push({ text: displayText, highlight: h });
     lastEnd = h.index + h.text.length;
   }
   if (lastEnd < text.length) {

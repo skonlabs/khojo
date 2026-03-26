@@ -105,10 +105,12 @@ function detectHallucination(output: string, context: string): FailureResult | n
 
   // 4. Quoted strings
   const quotedPattern = /"([^"]{5,})"|'([^']{5,})'/g;
+  const allOutputQuoted: string[] = [];
   const unsupportedQuoted: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = quotedPattern.exec(output)) !== null) {
     const q = (m[1] || m[2]).toLowerCase();
+    allOutputQuoted.push(q);
     if (!ctxNorm.includes(q)) unsupportedQuoted.push(q);
   }
 
@@ -123,7 +125,7 @@ function detectHallucination(output: string, context: string): FailureResult | n
     outputNums.length +
     outputDates.length +
     outputProperNouns.length +
-    unsupportedQuoted.length;
+    allOutputQuoted.length;
   const totalUnsupported =
     unsupportedNums.length +
     unsupportedDates.length +

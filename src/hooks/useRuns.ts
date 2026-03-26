@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 export interface Run {
   id: string;
@@ -63,6 +64,14 @@ export function useRuns() {
     enabled: !!user,
   });
 
+  // Keep a ref to the current activeProject?.id so the realtime callback always
+  // invalidates the right query key without needing activeProject in deps
+  // (which would cause unnecessary channel teardown/recreate on project switch).
+  const activeProjectIdRef = useRef(activeProject?.id);
+  useEffect(() => {
+    activeProjectIdRef.current = activeProject?.id;
+  }, [activeProject?.id]);
+
   // Realtime subscription — one channel per user (not per render).
   // Channel name is scoped to userId so project switches don't create
   // duplicate channels; the query key handles project filtering.
@@ -81,11 +90,17 @@ export function useRuns() {
           table: "runs",
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ["runs", user.id, activeProject?.id] });
-          // Only toast for INSERT events (new run received), not UPDATE (evaluation complete)
+        (payload: RealtimePostgresChangesPayload<{ id: string }>) => {
+          queryClient.invalidateQueries({ queryKey: ["runs", user.id, activeProjectIdRef.current] });
           if (payload.eventType === "INSERT" && initializedRef.current) {
             toast.info("New run received");
+          }
+          // Also refresh the individual run detail if it's open (evaluation completion)
+          if (payload.eventType === "UPDATE") {
+            const updatedId = (payload.new as { id?: string })?.id;
+            if (updatedId) {
+              queryClient.invalidateQueries({ queryKey: ["run", updatedId] });
+            }
           }
         }
       )
@@ -100,7 +115,7 @@ export function useRuns() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeProject?.id, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return query;
 }

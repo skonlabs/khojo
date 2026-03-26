@@ -119,10 +119,12 @@ function detectHallucination(
 
   // Quoted strings
   const quotedPattern = /"([^"]{5,})"|'([^']{5,})'/g;
+  const allOutputQuoted: string[] = [];
   const unsupportedQuoted: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = quotedPattern.exec(output)) !== null) {
     const q = (m[1] || m[2]).toLowerCase();
+    allOutputQuoted.push(q);
     if (!ctxNorm.includes(q)) unsupportedQuoted.push(q);
   }
 
@@ -137,7 +139,7 @@ function detectHallucination(
     outputNums.length +
     outputDates.length +
     outputProperNouns.length +
-    unsupportedQuoted.length;
+    allOutputQuoted.length;
   const totalUnsupported =
     unsupportedNums.length +
     unsupportedDates.length +
@@ -411,30 +413,6 @@ function analyze(
   const verb = detectVerbose(input, output, model);
   if (verb) failures.push(verb);
 
-  // If no specific failure detected and context is provided, flag potential
-  // context-grounding issue as low-confidence hallucination risk
-  if (failures.length === 0 && context) {
-    failures.push({
-      type: "hallucination",
-      whatFailed: "Potential unsupported claims — output could not be fully verified against context",
-      whyFailed: "No specific numerical or named-entity discrepancies were found, but the output may still contain unverifiable claims.",
-      rootCause: `Context grounding may be insufficient${prompt ? ` in prompt: "${prompt.slice(0, 50)}..."` : ""}. Model: ${model}.`,
-      fix: `+ system: "Answer ONLY using the provided context. If unsure, say 'I don't have enough information.'"`,
-      highlights: [],
-      signals: 1,
-    });
-  } else if (failures.length === 0 && !context) {
-    failures.push({
-      type: "inconsistent",
-      whatFailed: "Cannot fully verify without context — potential consistency risk",
-      whyFailed: "No context was provided to validate output claims against.",
-      rootCause: `Missing context/ground truth for validation. Model: ${model}.`,
-      fix: `+ // Add context to your trackAI call:\n+ trackAI({ input, output, context: retrievedDocs })`,
-      highlights: [],
-      signals: 1,
-    });
-  }
-
   const priority = ["hallucination", "incomplete", "irrelevant", "inconsistent", "verbose"];
   const primaryFailure =
     failures.find((f) => f.type === priority.find((p) => failures.some((ff) => ff.type === p))) ??
@@ -578,6 +556,16 @@ export default function AnalyzerPage() {
           Analyze
         </button>
       </div>
+
+      {result && result.failures.length === 0 && (
+        <div className="rounded-lg border border-border bg-card p-5 flex items-center gap-3 animate-fade-in">
+          <span className="text-success text-xl">✅</span>
+          <div>
+            <p className="text-sm font-medium text-foreground">No issues detected</p>
+            <p className="text-xs text-muted-foreground mt-0.5">The output passes all automated checks for this input/context pair.</p>
+          </div>
+        </div>
+      )}
 
       {result && result.primaryFailure && (
         <div className="rounded-lg border border-border bg-card p-5 space-y-4 animate-fade-in">

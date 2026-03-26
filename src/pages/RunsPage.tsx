@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Clock } from "lucide-react";
 
 export default function RunsPage() {
   const { data: runs, isLoading } = useRuns();
@@ -52,7 +52,11 @@ export default function RunsPage() {
               <span className="text-sm text-foreground truncate flex-1">{run.input.slice(0, 80)}{run.input.length > 80 ? "…" : ""}</span>
               <span className="text-xs font-mono text-muted-foreground shrink-0">{run.total_tokens}t</span>
               {run.model && <span className="text-xs bg-surface-2 text-muted-foreground rounded px-1.5 py-0.5 shrink-0">{run.model}</span>}
-              {run.primary_failure ? <FailureBadge type={run.primary_failure} /> : <CheckCircle className="h-4 w-4 text-success shrink-0" />}
+              {run.primary_failure
+                ? <FailureBadge type={run.primary_failure} />
+                : run.evaluated_at
+                  ? <CheckCircle className="h-4 w-4 text-success shrink-0" title="No issues detected" />
+                  : <Clock className="h-4 w-4 text-muted-foreground shrink-0" title="Evaluation pending" />}
             </button>
           ))
         )}

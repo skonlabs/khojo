@@ -25,7 +25,7 @@ export function ProjectSwitcher() {
     const { error } = await supabase.from("projects").insert({
       user_id: user.id,
       name: newName.trim(),
-    } as any);
+    });
     if (error) toast.error("Failed to create project");
     else {
       toast.success("Project created");
@@ -37,7 +37,7 @@ export function ProjectSwitcher() {
 
   const handleRename = async (id: string) => {
     if (!editName.trim()) return;
-    const { error } = await supabase.from("projects").update({ name: editName.trim() } as any).eq("id", id);
+    const { error } = await supabase.from("projects").update({ name: editName.trim() }).eq("id", id);
     if (error) toast.error("Failed to rename");
     else {
       toast.success("Renamed");
